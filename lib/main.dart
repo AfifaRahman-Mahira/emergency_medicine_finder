@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+<<<<<<< HEAD
 
 // -------------------- MODELS --------------------
 enum UserType { patient, pharmacyOwner, deliveryMan }
@@ -41,17 +42,25 @@ final List<Medicine> medicines = [
 final List<Map<String, dynamic>> orders = [];
 
 // -------------------- MAIN --------------------
+=======
+import 'screens/login_screen.dart';
+
+>>>>>>> 474f9bb (Initial commit: added login page)
 void main() {
   runApp(EmergencyMedicineFinderApp());
 }
 
 class EmergencyMedicineFinderApp extends StatelessWidget {
+<<<<<<< HEAD
   const EmergencyMedicineFinderApp({super.key});
 
+=======
+>>>>>>> 474f9bb (Initial commit: added login page)
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Emergency Medicine Finder',
+<<<<<<< HEAD
       debugShowCheckedModeBanner: false,
       theme: ThemeData(primarySwatch: Colors.blue),
       home: LoginScreen(),
@@ -338,6 +347,11 @@ class DeliveryHomeScreen extends StatelessWidget {
                 },
               ),
       ),
+=======
+      theme: ThemeData(primarySwatch: Colors.blue),
+      home: LoginScreen(),
+      debugShowCheckedModeBanner: false,
+>>>>>>> 474f9bb (Initial commit: added login page)
     );
   }
 }
