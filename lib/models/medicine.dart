@@ -1,13 +1,13 @@
 class Medicine {
   final String name;
   final String pharmacy;
-  int stock;
-  final String? alternative;
+  final int stock;
+  final double price;
 
   Medicine({
     required this.name,
     required this.pharmacy,
     required this.stock,
-    this.alternative,
+    required this.price,
   });
 }

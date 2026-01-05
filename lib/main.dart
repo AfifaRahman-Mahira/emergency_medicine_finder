@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-<<<<<<< HEAD
 
 // -------------------- MODELS --------------------
 enum UserType { patient, pharmacyOwner, deliveryMan }
@@ -42,25 +41,15 @@ final List<Medicine> medicines = [
 final List<Map<String, dynamic>> orders = [];
 
 // -------------------- MAIN --------------------
-=======
-import 'screens/login_screen.dart';
-
->>>>>>> 474f9bb (Initial commit: added login page)
 void main() {
   runApp(EmergencyMedicineFinderApp());
 }
 
 class EmergencyMedicineFinderApp extends StatelessWidget {
-<<<<<<< HEAD
-  const EmergencyMedicineFinderApp({super.key});
-
-=======
->>>>>>> 474f9bb (Initial commit: added login page)
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Emergency Medicine Finder',
-<<<<<<< HEAD
       debugShowCheckedModeBanner: false,
       theme: ThemeData(primarySwatch: Colors.blue),
       home: LoginScreen(),
@@ -79,7 +68,6 @@ class LoginScreen extends StatelessWidget {
     String email = emailController.text.trim();
     String pass = passwordController.text.trim();
 
-    // Null-safe way
     User? foundUser;
     for (var u in users) {
       if (u.email == email && u.password == pass) {
@@ -90,18 +78,14 @@ class LoginScreen extends StatelessWidget {
 
     if (foundUser != null) {
       if (foundUser.type == UserType.patient) {
-        Navigator.pushReplacement(
-            context, MaterialPageRoute(builder: (_) => SearchScreen()));
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => SearchScreen()));
       } else if (foundUser.type == UserType.pharmacyOwner) {
-        Navigator.pushReplacement(
-            context, MaterialPageRoute(builder: (_) => PharmacyHomeScreen()));
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => PharmacyHomeScreen()));
       } else {
-        Navigator.pushReplacement(
-            context, MaterialPageRoute(builder: (_) => DeliveryHomeScreen()));
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => DeliveryHomeScreen()));
       }
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Invalid email or password')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Invalid email or password')));
     }
   }
 
@@ -114,33 +98,21 @@ class LoginScreen extends StatelessWidget {
           child: SingleChildScrollView(
             child: Column(
               children: [
-                Text(
-                  'Emergency Medicine Finder',
-                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
-                ),
+                Text('Emergency Medicine Finder',
+                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
                 SizedBox(height: 50),
                 TextField(
                   controller: emailController,
-                  decoration: InputDecoration(
-                    labelText: 'Email',
-                    border: OutlineInputBorder(),
-                  ),
+                  decoration: InputDecoration(labelText: 'Email', border: OutlineInputBorder()),
                 ),
                 SizedBox(height: 20),
                 TextField(
                   controller: passwordController,
                   obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'Password',
-                    border: OutlineInputBorder(),
-                  ),
+                  decoration: InputDecoration(labelText: 'Password', border: OutlineInputBorder()),
                 ),
                 SizedBox(height: 30),
-                ElevatedButton(
-                  onPressed: () => login(context),
-                  child: Text('Login'),
-                ),
+                ElevatedButton(onPressed: () => login(context), child: Text('Login')),
               ],
             ),
           ),
@@ -170,10 +142,8 @@ class _SearchScreenState extends State<SearchScreen> {
 
   void searchMedicine(String query) {
     setState(() {
-      displayedMedicines = medicines
-          .where((med) =>
-              med.name.toLowerCase().contains(query.toLowerCase()))
-          .toList();
+      displayedMedicines =
+          medicines.where((med) => med.name.toLowerCase().contains(query.toLowerCase())).toList();
     });
   }
 
@@ -190,10 +160,7 @@ class _SearchScreenState extends State<SearchScreen> {
               decoration: InputDecoration(
                 labelText: 'Search Medicine',
                 border: OutlineInputBorder(),
-                suffixIcon: IconButton(
-                  icon: Icon(Icons.search),
-                  onPressed: () => searchMedicine(searchController.text),
-                ),
+                suffixIcon: IconButton(icon: Icon(Icons.search), onPressed: () => searchMedicine(searchController.text)),
               ),
               onChanged: (value) => searchMedicine(value),
             ),
@@ -208,15 +175,8 @@ class _SearchScreenState extends State<SearchScreen> {
                         return Card(
                           child: ListTile(
                             title: Text(med.name),
-                            subtitle:
-                                Text('${med.pharmacy} - Stock: ${med.stock}'),
-                            onTap: () {
-                              Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (_) =>
-                                          OrderScreen(medicine: med)));
-                            },
+                            subtitle: Text('${med.pharmacy} - Stock: ${med.stock}'),
+                            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => OrderScreen(medicine: med))),
                           ),
                         );
                       },
@@ -232,14 +192,11 @@ class _SearchScreenState extends State<SearchScreen> {
 // -------------------- ORDER SCREEN --------------------
 class OrderScreen extends StatelessWidget {
   final Medicine medicine;
-
   const OrderScreen({super.key, required this.medicine});
 
   void placeOrder(BuildContext context) {
     orders.add({'medicine': medicine, 'patient': 'Demo Patient'});
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Order placed successfully')),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Order placed successfully')));
   }
 
   @override
@@ -251,21 +208,16 @@ class OrderScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Medicine: ${medicine.name}',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            Text('Medicine: ${medicine.name}', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             SizedBox(height: 10),
             Text('Pharmacy: ${medicine.pharmacy}'),
             SizedBox(height: 10),
             Text('Stock: ${medicine.stock}'),
             SizedBox(height: 10),
             if (medicine.stock == 0 && medicine.alternative != null)
-              Text('Alternative: ${medicine.alternative}',
-                  style: TextStyle(color: Colors.green)),
+              Text('Alternative: ${medicine.alternative}', style: TextStyle(color: Colors.green)),
             SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () => placeOrder(context),
-              child: Text('Place Order'),
-            ),
+            ElevatedButton(onPressed: () => placeOrder(context), child: Text('Place Order')),
           ],
         ),
       ),
@@ -273,7 +225,7 @@ class OrderScreen extends StatelessWidget {
   }
 }
 
-// -------------------- PHARMACY HOME --------------------
+// -------------------- PHARMACY DASHBOARD --------------------
 class PharmacyHomeScreen extends StatelessWidget {
   const PharmacyHomeScreen({super.key});
 
@@ -300,8 +252,7 @@ class PharmacyHomeScreen extends StatelessWidget {
                         icon: Icon(Icons.add),
                         onPressed: () {
                           med.stock += 5;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Stock updated')));
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Stock updated')));
                         },
                       ),
                     ),
@@ -316,7 +267,7 @@ class PharmacyHomeScreen extends StatelessWidget {
   }
 }
 
-// -------------------- DELIVERY HOME --------------------
+// -------------------- DELIVERY DASHBOARD --------------------
 class DeliveryHomeScreen extends StatelessWidget {
   const DeliveryHomeScreen({super.key});
 
@@ -338,20 +289,13 @@ class DeliveryHomeScreen extends StatelessWidget {
                       subtitle: Text('Patient: ${order['patient']}'),
                       trailing: ElevatedButton(
                         child: Text('Delivered'),
-                        onPressed: () {
-                          orders.removeAt(index);
-                        },
+                        onPressed: () => orders.removeAt(index),
                       ),
                     ),
                   );
                 },
               ),
       ),
-=======
-      theme: ThemeData(primarySwatch: Colors.blue),
-      home: LoginScreen(),
-      debugShowCheckedModeBanner: false,
->>>>>>> 474f9bb (Initial commit: added login page)
     );
   }
 }

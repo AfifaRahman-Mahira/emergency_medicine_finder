@@ -6,62 +6,40 @@ class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
   @override
-  _RegisterScreenState createState() => _RegisterScreenState();
+  State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  TextEditingController emailController = TextEditingController();
-  TextEditingController passwordController = TextEditingController();
-  UserType selectedType = UserType.patient;
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
+  UserType type = UserType.patient;
 
   void register() {
-    String email = emailController.text.trim();
-    String pass = passwordController.text.trim();
-
-    if (email.isEmpty || pass.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Fill all fields')));
-      return;
-    }
-
-    users.add(User(email: email, password: pass, type: selectedType));
-
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text('Account created!')));
+    users.add(User(
+      email: emailController.text,
+      password: passwordController.text,
+      type: type,
+    ));
     Navigator.pop(context);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Register')),
+      appBar: AppBar(title: const Text('Register')),
       body: Padding(
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            TextField(
-              controller: emailController,
-              decoration: InputDecoration(labelText: 'Email'),
-            ),
-            SizedBox(height: 10),
-            TextField(
-              controller: passwordController,
-              obscureText: true,
-              decoration: InputDecoration(labelText: 'Password'),
-            ),
-            SizedBox(height: 10),
+            TextField(controller: emailController, decoration: const InputDecoration(labelText: 'Email')),
+            TextField(controller: passwordController, decoration: const InputDecoration(labelText: 'Password')),
             DropdownButton<UserType>(
-              value: selectedType,
-              items: UserType.values.map((e) {
-                return DropdownMenuItem<UserType>(
-                  value: e,
-                  child: Text(e.toString().split('.').last),
-                );
-              }).toList(),
-              onChanged: (val) => setState(() => selectedType = val!),
+              value: type,
+              items: UserType.values.map((e) =>
+                DropdownMenuItem(value: e, child: Text(e.name))).toList(),
+              onChanged: (v) => setState(() => type = v!),
             ),
-            SizedBox(height: 20),
-            ElevatedButton(onPressed: register, child: Text('Create Account')),
+            ElevatedButton(onPressed: register, child: const Text('Register'))
           ],
         ),
       ),
