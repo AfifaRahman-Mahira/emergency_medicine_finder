@@ -1,15 +1,19 @@
 class Medicine {
-  final String name;
-  final String pharmacy;
-  final String location;
+  String id;
+  String name;
+  String pharmacyName;
+  String location;
+  double price;
   int stock;
-  final String? alternative;
+  String alternative;
 
   Medicine({
+    required this.id,
     required this.name,
-    required this.pharmacy,
+    required this.pharmacyName,
     required this.location,
+    required this.price,
     required this.stock,
-    this.alternative,
+    this.alternative = "No alternative suggested",
   });
 }
