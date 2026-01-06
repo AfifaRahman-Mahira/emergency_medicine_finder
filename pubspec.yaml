@@ -1,7 +1,5 @@
 name: emergency_medicine_finder
-description: Emergency Medicine Finder App
-publish_to: 'none'
-
+description: Emergency Medicine Finder Phase 1
 version: 1.0.0+1
 
 environment:
@@ -10,11 +8,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  cupertino_icons: ^1.0.6
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
-flutter:
-  uses-material-design: true

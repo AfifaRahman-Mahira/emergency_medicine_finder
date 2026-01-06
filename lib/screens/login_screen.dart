@@ -1,151 +1,62 @@
 import 'package:flutter/material.dart';
-<<<<<<< HEAD
-import '../data/dummy_data.dart';
 import 'register_screen.dart';
-import 'search_screen.dart';
-import 'pharmacy_home_screen.dart';
-import 'delivery_home_screen.dart';
+import 'patient_home.dart';
+import 'delivery_home.dart';
+import 'pharmacy_home.dart';
+import '../data/dummy_data.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
-=======
-
-class LoginScreen extends StatefulWidget {
-  LoginScreen({super.key});
->>>>>>> 474f9bb (Initial commit: added login page)
-
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  _LoginScreenState createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-<<<<<<< HEAD
-  TextEditingController emailController = TextEditingController();
-  TextEditingController passwordController = TextEditingController();
-=======
-  final TextEditingController emailController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
-
-  // Dummy users list
-  final List<Map<String, String>> users = [
-    {'email': 'test@example.com', 'password': '123456'},
-    {'email': 'user@example.com', 'password': 'abcdef'},
-  ];
->>>>>>> 474f9bb (Initial commit: added login page)
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
+  String role = 'Patient';
 
   void login() {
-    String email = emailController.text.trim();
-    String password = passwordController.text.trim();
+    final email = emailController.text.trim();
+    final password = passwordController.text;
 
-<<<<<<< HEAD
-    final user = users.firstWhere(
-        (u) => u['email'] == email && u['password'] == password,
-        orElse: () => {});
+    final matchedUsers = users.where((u) => u.email == email && u.password == password && u.role == role);
 
-    if (user.isEmpty) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Invalid login')));
-      return;
-    }
+    if (matchedUsers.isNotEmpty) {
+      Widget page;
+      if (role == 'Patient') page = PatientHome();
+      else if (role == 'Delivery') page = DeliveryHome();
+      else page = PharmacyHome();
 
-    String role = user['role']!;
-
-    if (role == 'user') {
-      Navigator.pushReplacement(
-          context, MaterialPageRoute(builder: (_) => SearchScreen()));
-    } else if (role == 'pharmacy') {
-      Navigator.pushReplacement(
-          context, MaterialPageRoute(builder: (_) => PharmacyHomeScreen()));
+      Navigator.push(context, MaterialPageRoute(builder: (context) => page));
     } else {
-      Navigator.pushReplacement(
-          context, MaterialPageRoute(builder: (_) => DeliveryHomeScreen()));
-=======
-    bool found = users.any(
-        (u) => u['email'] == email && u['password'] == password);
-
-    if (found) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Login successful! Welcome $email')),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Invalid email or password')),
-      );
->>>>>>> 474f9bb (Initial commit: added login page)
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invalid user or role!')));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-<<<<<<< HEAD
+      appBar: AppBar(title: const Text('Login'), centerTitle: true),
       body: Padding(
-        padding: EdgeInsets.all(20),
-        child: Center(
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                Text(
-                  'Emergency Medicine Finder',
-                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: 50),
-                TextField(
-                  controller: emailController,
-                  decoration: InputDecoration(
-                      labelText: 'Email', border: OutlineInputBorder()),
-                ),
-                SizedBox(height: 20),
-                TextField(
-                  controller: passwordController,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                      labelText: 'Password', border: OutlineInputBorder()),
-                ),
-                SizedBox(height: 20),
-                ElevatedButton(onPressed: login, child: Text('Login')),
-                SizedBox(height: 10),
-                TextButton(
-                    onPressed: () {
-                      Navigator.push(context,
-                          MaterialPageRoute(builder: (_) => RegisterScreen()));
-                    },
-                    child: Text('Register New Account'))
-              ],
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          children: [
+            TextField(controller: emailController, decoration: const InputDecoration(labelText: 'Email', border: OutlineInputBorder())),
+            const SizedBox(height: 16),
+            TextField(controller: passwordController, decoration: const InputDecoration(labelText: 'Password', border: OutlineInputBorder()), obscureText: true),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              value: role,
+              decoration: const InputDecoration(labelText: 'Login As', border: OutlineInputBorder()),
+              items: ['Patient', 'Delivery', 'Pharmacy Owner'].map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
+              onChanged: (v) => setState(() => role = v!),
             ),
-=======
-      appBar: AppBar(title: const Text('Login')),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: emailController,
-                decoration: const InputDecoration(labelText: 'Email'),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: passwordController,
-                decoration: const InputDecoration(labelText: 'Password'),
-                obscureText: true,
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: login,
-                child: const Text('Login'),
-              ),
-            ],
->>>>>>> 474f9bb (Initial commit: added login page)
-          ),
+            const SizedBox(height: 24),
+            SizedBox(width: double.infinity, height: 50, child: ElevatedButton(onPressed: login, child: const Text('LOGIN'))),
+            TextButton(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => RegisterScreen())), child: const Text('Create Account'))
+          ],
         ),
       ),
     );
   }
 }
-<<<<<<< HEAD
-
-=======
->>>>>>> 474f9bb (Initial commit: added login page)
