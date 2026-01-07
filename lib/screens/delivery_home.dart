@@ -5,7 +5,9 @@ class DeliveryHome extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('Delivery Dashboard')),
-      body: Center(child: Text('Manage Deliveries')),
+      body: Center(
+        child: Text('Delivery tasks here'),
+      ),
     );
   }
 }

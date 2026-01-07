@@ -8,8 +8,4 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  shared_preferences: ^2.5.4
-
-dev_dependencies:
-  flutter_test:
-    sdk: flutter
+  shared_preferences: ^2.2.2 # এটি যোগ করুন

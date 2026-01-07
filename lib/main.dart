@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
 import 'screens/login_screen.dart';
+import 'data/dummy_data.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await loadAllData(); // load data on app start
   runApp(EmergencyMedicineFinder());
 }
+
 
 class EmergencyMedicineFinder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Emergency Medicine Finder',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(primarySwatch: Colors.blue),
-      home: LoginScreen(), // এখানে const থাকলে সরাইয়া দিবি
+      title: 'Emergency Medicine Finder',
+      home: LoginScreen(),
     );
   }
 }

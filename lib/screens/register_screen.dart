@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../data/dummy_data.dart';
 import '../models/user.dart';
+import '../data/dummy_data.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -12,20 +12,34 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
-  final pharmacyNameController = TextEditingController();
+  final pharmacyController = TextEditingController();
   String selectedRole = 'Patient';
 
-  void register() {
-    if (emailController.text.isNotEmpty && passwordController.text.isNotEmpty) {
-      users.add(User(
-        email: emailController.text.trim(),
-        password: passwordController.text,
-        role: selectedRole,
-        pharmacyName: selectedRole == 'Pharmacy' ? pharmacyNameController.text : null,
-      ));
+  void register() async {
+    final email = emailController.text.trim();
+    final password = passwordController.text.trim();
 
+    if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Registered successfully')),
+        const SnackBar(content: Text("Please fill all fields!")),
+      );
+      return;
+    }
+
+    // নতুন ইউজার ডাটা লিস্টে যুক্ত করা
+    users.add(User(
+      email: email,
+      password: password,
+      role: selectedRole,
+      pharmacyName: selectedRole == 'Pharmacy' ? pharmacyController.text.trim() : null,
+    ));
+
+    // ডাটা ফাইলে সেভ করা (Persistence)
+    await saveAllData(); 
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Registration Successful! Now Login.")),
       );
       Navigator.pop(context);
     }
@@ -34,50 +48,52 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Register')),
+      appBar: AppBar(title: const Text("Register"), centerTitle: true),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: SingleChildScrollView(
           child: Column(
             children: [
               TextField(
-                controller: emailController, 
-                decoration: const InputDecoration(labelText: 'Email', border: OutlineInputBorder())
+                controller: emailController,
+                decoration: const InputDecoration(labelText: "Email", border: OutlineInputBorder()),
               ),
               const SizedBox(height: 16),
               TextField(
-                controller: passwordController, 
-                obscureText: true, 
-                decoration: const InputDecoration(labelText: 'Password', border: OutlineInputBorder())
+                controller: passwordController,
+                decoration: const InputDecoration(labelText: "Password", border: OutlineInputBorder()),
+                obscureText: true,
               ),
               const SizedBox(height: 16),
+              // এখানে initialValue ব্যবহার করে এরর ফিক্স করা হয়েছে
               DropdownButtonFormField<String>(
-                decoration: const InputDecoration(labelText: 'Role', border: OutlineInputBorder()),
-                value: selectedRole,
+                decoration: const InputDecoration(labelText: "Register As", border: OutlineInputBorder()),
+                initialValue: selectedRole, 
                 items: ['Patient', 'Delivery', 'Pharmacy'].map((String r) {
-                  return DropdownMenuItem<String>(
-                    value: r,
-                    child: Text(r),
-                  );
+                  return DropdownMenuItem<String>(value: r, child: Text(r));
                 }).toList(),
-                onChanged: (String? newValue) {
+                onChanged: (val) {
                   setState(() {
-                    selectedRole = newValue!;
+                    selectedRole = val!;
                   });
                 },
               ),
               if (selectedRole == 'Pharmacy') ...[
                 const SizedBox(height: 16),
                 TextField(
-                  controller: pharmacyNameController, 
-                  decoration: const InputDecoration(labelText: 'Pharmacy Name', border: OutlineInputBorder())
+                  controller: pharmacyController,
+                  decoration: const InputDecoration(labelText: "Pharmacy Name", border: OutlineInputBorder()),
                 ),
               ],
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
-                height: 50,
-                child: ElevatedButton(onPressed: register, child: const Text('REGISTER')),
+                height: 55,
+                child: ElevatedButton(
+                  onPressed: register, 
+                  style: ElevatedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+                  child: const Text("REGISTER"),
+                ),
               ),
             ],
           ),
