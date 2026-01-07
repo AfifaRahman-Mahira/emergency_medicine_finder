@@ -3,24 +3,29 @@ import '../data/dummy_data.dart';
 import '../models/user.dart';
 
 class RegisterScreen extends StatefulWidget {
+  const RegisterScreen({super.key});
+
   @override
-  _RegisterScreenState createState() => _RegisterScreenState();
+  State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final TextEditingController emailController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
-  String role = 'Patient';
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
+  final pharmacyNameController = TextEditingController();
+  String selectedRole = 'Patient';
 
   void register() {
     if (emailController.text.isNotEmpty && passwordController.text.isNotEmpty) {
       users.add(User(
         email: emailController.text.trim(),
         password: passwordController.text,
-        role: role,
+        role: selectedRole,
+        pharmacyName: selectedRole == 'Pharmacy' ? pharmacyNameController.text : null,
       ));
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Registered successfully as $role')),
+        const SnackBar(content: Text('Registered successfully')),
       );
       Navigator.pop(context);
     }
@@ -29,26 +34,53 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Register Account')),
+      appBar: AppBar(title: const Text('Register')),
       body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          children: [
-            TextField(controller: emailController, decoration: const InputDecoration(labelText: 'Email', border: OutlineInputBorder())),
-            const SizedBox(height: 16),
-            TextField(controller: passwordController, decoration: const InputDecoration(labelText: 'Password', border: OutlineInputBorder()), obscureText: true),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              value: role,
-              decoration: const InputDecoration(labelText: 'Role', border: OutlineInputBorder()),
-              items: ['Patient', 'Delivery', 'Pharmacy Owner']
-                  .map((r) => DropdownMenuItem(value: r, child: Text(r)))
-                  .toList(),
-              onChanged: (val) => setState(() => role = val!),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(onPressed: register, child: const Text('REGISTER')),
-          ],
+        padding: const EdgeInsets.all(24),
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              TextField(
+                controller: emailController, 
+                decoration: const InputDecoration(labelText: 'Email', border: OutlineInputBorder())
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: passwordController, 
+                obscureText: true, 
+                decoration: const InputDecoration(labelText: 'Password', border: OutlineInputBorder())
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                decoration: const InputDecoration(labelText: 'Role', border: OutlineInputBorder()),
+                value: selectedRole,
+                items: ['Patient', 'Delivery', 'Pharmacy'].map((String r) {
+                  return DropdownMenuItem<String>(
+                    value: r,
+                    child: Text(r),
+                  );
+                }).toList(),
+                onChanged: (String? newValue) {
+                  setState(() {
+                    selectedRole = newValue!;
+                  });
+                },
+              ),
+              if (selectedRole == 'Pharmacy') ...[
+                const SizedBox(height: 16),
+                TextField(
+                  controller: pharmacyNameController, 
+                  decoration: const InputDecoration(labelText: 'Pharmacy Name', border: OutlineInputBorder())
+                ),
+              ],
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(onPressed: register, child: const Text('REGISTER')),
+              ),
+            ],
+          ),
         ),
       ),
     );

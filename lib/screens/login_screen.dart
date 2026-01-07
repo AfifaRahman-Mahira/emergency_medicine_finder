@@ -1,35 +1,46 @@
 import 'package:flutter/material.dart';
+import '../data/dummy_data.dart';
 import 'register_screen.dart';
 import 'patient_home.dart';
 import 'delivery_home.dart';
 import 'pharmacy_home.dart';
-import '../data/dummy_data.dart';
 
 class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
+
   @override
-  _LoginScreenState createState() => _LoginScreenState();
+  State<LoginScreen> createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
-  String role = 'Patient';
+  String selectedRole = 'Patient';
 
   void login() {
     final email = emailController.text.trim();
     final password = passwordController.text;
 
-    final matchedUsers = users.where((u) => u.email == email && u.password == password && u.role == role);
+    try {
+      final user = users.firstWhere((u) =>
+          u.email == email &&
+          u.password == password &&
+          u.role == selectedRole);
 
-    if (matchedUsers.isNotEmpty) {
       Widget page;
-      if (role == 'Patient') page = PatientHome();
-      else if (role == 'Delivery') page = DeliveryHome();
-      else page = PharmacyHome();
+      if (selectedRole == 'Patient') {
+        page = PatientHome();
+      } else if (selectedRole == 'Delivery') {
+        page = DeliveryHome();
+      } else {
+        page = PharmacyHome(pharmacyName: user.pharmacyName ?? "My Pharmacy");
+      }
 
-      Navigator.push(context, MaterialPageRoute(builder: (context) => page));
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invalid user or role!')));
+      Navigator.push(context, MaterialPageRoute(builder: (_) => page));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invalid login or role!')),
+      );
     }
   }
 
@@ -38,23 +49,49 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Login'), centerTitle: true),
       body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          children: [
-            TextField(controller: emailController, decoration: const InputDecoration(labelText: 'Email', border: OutlineInputBorder())),
-            const SizedBox(height: 16),
-            TextField(controller: passwordController, decoration: const InputDecoration(labelText: 'Password', border: OutlineInputBorder()), obscureText: true),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              value: role,
-              decoration: const InputDecoration(labelText: 'Login As', border: OutlineInputBorder()),
-              items: ['Patient', 'Delivery', 'Pharmacy Owner'].map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
-              onChanged: (v) => setState(() => role = v!),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(width: double.infinity, height: 50, child: ElevatedButton(onPressed: login, child: const Text('LOGIN'))),
-            TextButton(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => RegisterScreen())), child: const Text('Create Account'))
-          ],
+        padding: const EdgeInsets.all(24),
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              TextField(
+                controller: emailController,
+                decoration: const InputDecoration(labelText: 'Email', border: OutlineInputBorder()),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: passwordController,
+                obscureText: true,
+                decoration: const InputDecoration(labelText: 'Password', border: OutlineInputBorder()),
+              ),
+              const SizedBox(height: 16),
+              // এখানে এরর ফিক্স করার জন্য ডিরেক্ট ভ্যালু পাস করছি
+              DropdownButtonFormField<String>(
+                decoration: const InputDecoration(labelText: 'Login As', border: OutlineInputBorder()),
+                value: selectedRole,
+                items: ['Patient', 'Delivery', 'Pharmacy'].map((String r) {
+                  return DropdownMenuItem<String>(
+                    value: r,
+                    child: Text(r),
+                  );
+                }).toList(),
+                onChanged: (String? newValue) {
+                  setState(() {
+                    selectedRole = newValue!;
+                  });
+                },
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(onPressed: login, child: const Text('LOGIN')),
+              ),
+              TextButton(
+                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RegisterScreen())),
+                child: const Text('Create Account'),
+              )
+            ],
+          ),
         ),
       ),
     );
