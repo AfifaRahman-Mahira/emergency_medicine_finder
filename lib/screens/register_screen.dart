@@ -1,46 +1,42 @@
 import 'package:flutter/material.dart';
 import '../models/user.dart';
 import '../data/dummy_data.dart';
-import '../widgets/custom_design.dart'; // ডিজাইন ফাইল ইমপোর্ট
+import '../widgets/custom_design.dart'; 
 
 class RegisterScreen extends StatefulWidget {
+  const RegisterScreen({super.key});
+
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
+  final nameController = TextEditingController();
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   final pharmacyController = TextEditingController();
   String selectedRole = 'Patient';
 
   void register() async {
-    // আপনার অরিজিনাল লজিক
     if (emailController.text.isEmpty || passwordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Fill all fields"),
-          backgroundColor: Colors.orangeAccent,
-        ),
+        const SnackBar(content: Text("Fill all fields"), backgroundColor: Colors.orangeAccent),
       );
       return;
     }
 
     users.add(
       User(
+        name: nameController.text.trim().isEmpty ? emailController.text.split('@')[0] : nameController.text.trim(),
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
         role: selectedRole,
-        pharmacyName:
-            selectedRole == 'Pharmacy' ? pharmacyController.text.trim() : null,
+        pharmacyName: selectedRole == 'Pharmacy' ? pharmacyController.text.trim() : null,
       ),
     );
 
-    await saveAllData(); // ডাটা সেভ করা
-
-    if (mounted) {
-      Navigator.pop(context); // সাকসেস হলে আগের পেজে ফেরত যাওয়া
-    }
+    await saveAllData(); 
+    if (mounted) Navigator.pop(context); 
   }
 
   @override
@@ -61,83 +57,38 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 20),
-              const Text(
-                "Create Account",
-                style: TextStyle(
-                    fontSize: 30,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1A237E)),
-              ),
-              const SizedBox(height: 10),
-              const Text(
-                "Join us to find emergency medicines easily",
-                style: TextStyle(fontSize: 15, color: Colors.blueGrey),
-              ),
-              const SizedBox(height: 40),
-
-              // এনিমেটেড ইমেইল ফিল্ড
-              CustomTextField(
-                controller: emailController,
-                label: "Email Address",
-                icon: Icons.alternate_email_rounded,
-              ),
+              const Text("Create Account", style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: Color(0xFF1A237E))),
+              const SizedBox(height: 30),
+              CustomTextField(controller: nameController, label: "Full Name", icon: Icons.person_outline_rounded),
               const SizedBox(height: 15),
-
-              // এনিমেটেড পাসওয়ার্ড ফিল্ড
-              CustomTextField(
-                controller: passwordController,
-                label: "Password",
-                icon: Icons.lock_outline_rounded,
-                isPassword: true,
-              ),
-              const SizedBox(height: 20),
-
-              // রোল সিলেকশন ড্রপডাউন
-              const Text("  Register As",
-                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey)),
+              CustomTextField(controller: emailController, label: "Email Address", icon: Icons.alternate_email_rounded),
+              const SizedBox(height: 15),
+              CustomTextField(controller: passwordController, label: "Password", icon: Icons.lock_outline_rounded, isPassword: true),
+              const SizedBox(height: 25),
+              const Text("  Register As", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey)),
               const SizedBox(height: 10),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 15),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10)
-                  ],
+                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10)],
                 ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
                     value: selectedRole,
                     isExpanded: true,
-                    icon: const Icon(Icons.keyboard_arrow_down_rounded,
-                        color: Colors.blueAccent),
-                    items: ['Patient', 'Delivery', 'Pharmacy']
-                        .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                        .toList(),
+                    items: ['Patient', 'Delivery', 'Pharmacy'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
                     onChanged: (v) => setState(() => selectedRole = v!),
                   ),
                 ),
               ),
-
-              // ফার্মেসি নেম ফিল্ড (লজিক অনুযায়ী শুধু ফার্মেসি সিলেক্ট করলে আসবে)
               if (selectedRole == 'Pharmacy') ...[
                 const SizedBox(height: 20),
-                CustomTextField(
-                  controller: pharmacyController,
-                  label: "Pharmacy Name",
-                  icon: Icons.local_pharmacy_rounded,
-                ),
+                CustomTextField(controller: pharmacyController, label: "Pharmacy Name", icon: Icons.local_pharmacy_rounded),
               ],
-
               const SizedBox(height: 40),
-
-              // আপনার তৈরি করা প্রিমিয়াম বাটন
-              CustomButton(
-                text: "REGISTER",
-                onPressed: register,
-              ),
-              const SizedBox(height: 20),
+              CustomButton(text: "REGISTER", onPressed: register),
             ],
           ),
         ),

@@ -17,9 +17,6 @@ class _LoginScreenState extends State<LoginScreen> {
   String selectedRole = 'Patient';
 
   void login() async {
-    // আগের সব লজিক ঠিক রাখা হয়েছে
-    print("Attempting login with: ${emailController.text} and role: $selectedRole");
-    
     try {
       final user = users.firstWhere(
         (u) =>
@@ -37,7 +34,7 @@ class _LoginScreenState extends State<LoginScreen> {
         next = DeliveryHome();
       } else {
         next = PharmacyHome(
-          pharmacyName: user.pharmacyName ?? 'Pharmacy',
+          pharmacyName: user.pharmacyName ?? user.name,
         );
       }
 
@@ -58,16 +55,14 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFF), // প্রিমিয়াম হালকা ব্যাকগ্রাউন্ড
+      backgroundColor: const Color(0xFFF8FAFF), 
       body: Stack(
         children: [
-          // পেছনের ডেকোরেশন (ডিজাইনের জন্য)
           Positioned(
             top: -50,
             right: -50,
-            child: CircleAvatar(radius: 100, backgroundColor: Colors.blueAccent.withOpacity(0.05)),
+            child: CircleAvatar(radius: 100, backgroundColor: Colors.blueAccent.withValues(alpha: 0.05)),
           ),
-          
           SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 30.0),
@@ -75,8 +70,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 60),
-                  
-                  // অ্যানিমেটেড আইকন সেকশন
                   Center(
                     child: TweenAnimationBuilder(
                       duration: const Duration(seconds: 1),
@@ -92,45 +85,23 @@ class _LoginScreenState extends State<LoginScreen> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(color: Colors.blueAccent.withOpacity(0.1), blurRadius: 20)
-                          ],
+                          boxShadow: [BoxShadow(color: Colors.blueAccent.withValues(alpha: 0.1), blurRadius: 20)],
                         ),
                         child: const Icon(Icons.medication_liquid_rounded, size: 60, color: Colors.blueAccent),
                       ),
                     ),
                   ),
-                  
                   const SizedBox(height: 40),
-                  const Text(
-                    "Welcome Back",
-                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF1A237E)),
-                  ),
+                  const Text("Welcome Back", style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF1A237E))),
                   const SizedBox(height: 8),
-                  const Text(
-                    "Sign in to your account",
-                    style: TextStyle(fontSize: 16, color: Colors.blueGrey),
-                  ),
+                  const Text("Sign in to your account", style: TextStyle(fontSize: 16, color: Colors.blueGrey)),
                   const SizedBox(height: 40),
 
-                  // ইমেইল ইনপুট (আপনার উইজেট থেকে)
-                  CustomTextField(
-                    controller: emailController,
-                    label: "Email Address",
-                    icon: Icons.alternate_email_rounded,
-                  ),
+                  CustomTextField(controller: emailController, label: "Email Address", icon: Icons.alternate_email_rounded),
                   const SizedBox(height: 20),
-
-                  // পাসওয়ার্ড ইনপুট (আপনার উইজেট থেকে)
-                  CustomTextField(
-                    controller: passwordController,
-                    label: "Password",
-                    icon: Icons.lock_outline_rounded,
-                    isPassword: true,
-                  ),
+                  CustomTextField(controller: passwordController, label: "Password", icon: Icons.lock_outline_rounded, isPassword: true),
                   const SizedBox(height: 25),
 
-                  // রোল সিলেক্টর ডিজাইন
                   const Text("  Login As", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey)),
                   const SizedBox(height: 10),
                   Container(
@@ -138,7 +109,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
-                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10)],
+                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10)],
                     ),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
@@ -152,36 +123,13 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ),
-                  
                   const SizedBox(height: 40),
-
-                  // লগইন বাটন (আপনার উইজেট থেকে)
-                  CustomButton(
-                    text: "LOGIN",
-                    onPressed: login,
-                  ),
-
+                  CustomButton(text: "LOGIN", onPressed: login),
                   const SizedBox(height: 25),
-                  
-                  // নিচে রেজিস্ট্রেশন লিঙ্ক
                   Center(
                     child: TextButton(
-                      onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => RegisterScreen()),
-                      ),
-                      child: RichText(
-                        text: const TextSpan(
-                          text: "Don't have an account? ",
-                          style: TextStyle(color: Colors.grey),
-                          children: [
-                            TextSpan(
-                              text: "Register Now",
-                              style: TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold),
-                            ),
-                          ],
-                        ),
-                      ),
+                      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => RegisterScreen())),
+                      child: const Text("Register Now", style: TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold)),
                     ),
                   ),
                 ],

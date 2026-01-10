@@ -33,11 +33,11 @@ class CustomTextField extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
           gradient: LinearGradient(
-            colors: [Colors.white, Colors.blue.withOpacity(0.05)],
+            colors: [Colors.white, Colors.blue.withValues(alpha: 0.05)],
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 20,
               offset: const Offset(0, 10),
             ),
@@ -85,6 +85,12 @@ class _CustomButtonState extends State<CustomButton> with SingleTickerProviderSt
   }
 
   @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTapDown: (_) => _controller.forward(),
@@ -106,7 +112,7 @@ class _CustomButtonState extends State<CustomButton> with SingleTickerProviderSt
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.blue.withOpacity(0.4),
+                color: Colors.blue.withValues(alpha: 0.4),
                 blurRadius: 15,
                 offset: const Offset(0, 8),
               ),

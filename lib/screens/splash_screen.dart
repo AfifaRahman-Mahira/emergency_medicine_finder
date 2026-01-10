@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class SplashScreen extends StatefulWidget {
-  final Widget targetScreen; // কোন পেজে যাবে তা এখান থেকে রিসিভ করবে
+  final Widget targetScreen;
 
   const SplashScreen({super.key, required this.targetScreen});
 
@@ -13,7 +13,7 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    // ৩ সেকেন্ড পর অটোমেটিক নেভিগেশন
+    // ৩ সেকেন্ড ওয়েট করে টার্গেট স্ক্রিনে চলে যাবে
     Future.delayed(const Duration(seconds: 3), () {
       if (mounted) {
         Navigator.pushReplacement(
@@ -34,7 +34,6 @@ class _SplashScreenState extends State<SplashScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // প্রিমিয়াম লোগো অ্যানিমেশন
                 TweenAnimationBuilder(
                   duration: const Duration(seconds: 2),
                   tween: Tween<double>(begin: 0, end: 1),
@@ -61,7 +60,6 @@ class _SplashScreenState extends State<SplashScreen> {
               ],
             ),
           ),
-          // নিচের দিকে ছোট একটি টেক্সট
           const Positioned(
             bottom: 40,
             left: 0,

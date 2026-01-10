@@ -7,58 +7,63 @@ List<User> users = [];
 List<Medicine> allMedicines = [];
 User? currentUser;
 
-// Save all users and medicines
+
+void initializeDummyMedicines() {
+  if (allMedicines.isEmpty) {
+    allMedicines = [
+
+      Medicine(
+        id: '1',
+        name: "Ace 500",
+        genericName: "Paracetamol",
+        pharmacyName: "Lazz Pharma",
+        price: 10.0,
+        stock: 50,
+        location: "Dhanmondi, Dhaka",
+        distance: 1.2,
+      ),
+    ];
+  }
+}
+
+
 Future<void> saveAllData() async {
   final prefs = await SharedPreferences.getInstance();
-
-  await prefs.setString(
-    'user_db',
-    jsonEncode(users.map((u) => u.toMap()).toList()),
-  );
-
-  await prefs.setString(
-    'med_db',
-    jsonEncode(allMedicines.map((m) => m.toMap()).toList()),
-  );
+  await prefs.setString('user_db', jsonEncode(users.map((u) => u.toMap()).toList()));
+  await prefs.setString('med_db', jsonEncode(allMedicines.map((m) => m.toMap()).toList()));
 }
 
-// Load all users and medicines
+
 Future<void> loadAllData() async {
   final prefs = await SharedPreferences.getInstance();
-
+  
   final savedUsers = prefs.getString('user_db');
   final savedMeds = prefs.getString('med_db');
+  final sessionData = prefs.getString('current_user');
 
   if (savedUsers != null) {
-    users = (jsonDecode(savedUsers) as List)
-        .map((e) => User.fromMap(e))
-        .toList();
+    users = (jsonDecode(savedUsers) as List).map((e) => User.fromMap(e)).toList();
+  }
+  
+  if (savedMeds != null) {
+    allMedicines = (jsonDecode(savedMeds) as List).map((e) => Medicine.fromMap(e)).toList();
+  } else {
+    
+    initializeDummyMedicines();
+    await saveAllData();
   }
 
-  if (savedMeds != null) {
-    allMedicines = (jsonDecode(savedMeds) as List)
-        .map((e) => Medicine.fromMap(e))
-        .toList();
+  if (sessionData != null) {
+    currentUser = User.fromMap(jsonDecode(sessionData));
   }
 }
 
-// Save logged-in user
 Future<void> saveCurrentUser(User user) async {
   final prefs = await SharedPreferences.getInstance();
   await prefs.setString('current_user', jsonEncode(user.toMap()));
   currentUser = user;
 }
 
-// Load logged-in user
-Future<void> loadCurrentUser() async {
-  final prefs = await SharedPreferences.getInstance();
-  final data = prefs.getString('current_user');
-  if (data != null) {
-    currentUser = User.fromMap(jsonDecode(data));
-  }
-}
-
-// Logout user
 Future<void> logoutUser() async {
   final prefs = await SharedPreferences.getInstance();
   await prefs.remove('current_user');
