@@ -26,7 +26,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
-    // নতুন ইউজার ডাটা লিস্টে যুক্ত করা
     users.add(User(
       email: email,
       password: password,
@@ -34,7 +33,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       pharmacyName: selectedRole == 'Pharmacy' ? pharmacyController.text.trim() : null,
     ));
 
-    // ডাটা ফাইলে সেভ করা (Persistence)
+
     await saveAllData(); 
 
     if (mounted) {
@@ -65,7 +64,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 obscureText: true,
               ),
               const SizedBox(height: 16),
-              // এখানে initialValue ব্যবহার করে এরর ফিক্স করা হয়েছে
+             
               DropdownButtonFormField<String>(
                 decoration: const InputDecoration(labelText: "Register As", border: OutlineInputBorder()),
                 initialValue: selectedRole, 

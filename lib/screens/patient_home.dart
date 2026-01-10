@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../data/dummy_data.dart'; // এই ইমপোর্টটি জরুরি
+import '../data/dummy_data.dart'; 
 
 class PatientHome extends StatelessWidget {
   @override

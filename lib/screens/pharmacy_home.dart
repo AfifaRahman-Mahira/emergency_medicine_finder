@@ -24,7 +24,7 @@ class _PharmacyHomeState extends State<PharmacyHome> {
           price: double.parse(priceController.text),
         ));
       });
-      await saveAllData(); // ডাটা ফাইলে সেভ হবে
+      await saveAllData(); 
       Navigator.pop(context);
     }
   }

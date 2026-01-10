@@ -3,11 +3,14 @@ import 'screens/login_screen.dart';
 import 'data/dummy_data.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await loadAllData(); // load data on app start
+  
+  WidgetsFlutterBinding.ensureInitialized(); 
+  
+
+  await loadAllData(); 
+  
   runApp(EmergencyMedicineFinder());
 }
-
 
 class EmergencyMedicineFinder extends StatelessWidget {
   @override
