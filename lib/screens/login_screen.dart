@@ -4,10 +4,11 @@ import 'register_screen.dart';
 import 'patient_home.dart';
 import 'delivery_home.dart';
 import 'pharmacy_home.dart';
+import '../widgets/custom_design.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
-  _LoginScreenState createState() => _LoginScreenState();
+  State<LoginScreen> createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen> {
@@ -15,27 +16,19 @@ class _LoginScreenState extends State<LoginScreen> {
   final passwordController = TextEditingController();
   String selectedRole = 'Patient';
 
-  bool loading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    await loadAllData(); // 🔥 VERY IMPORTANT
-    setState(() {
-      loading = false;
-    });
-  }
-
-  void login() {
+  void login() async {
+    // আগের সব লজিক ঠিক রাখা হয়েছে
+    print("Attempting login with: ${emailController.text} and role: $selectedRole");
+    
     try {
-      final user = users.firstWhere((u) =>
-          u.email == emailController.text.trim() &&
-          u.password == passwordController.text.trim() &&
-          u.role == selectedRole);
+      final user = users.firstWhere(
+        (u) =>
+            u.email == emailController.text.trim() &&
+            u.password == passwordController.text.trim() &&
+            u.role == selectedRole,
+      );
+
+      await saveCurrentUser(user);
 
       Widget next;
       if (user.role == 'Patient') {
@@ -48,59 +41,154 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => next),
-      );
+      if (mounted) {
+        Navigator.pushReplacement(
+            context, MaterialPageRoute(builder: (_) => next));
+      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Invalid email / password / role")),
+        const SnackBar(
+          content: Text("Invalid email / password / role"),
+          backgroundColor: Colors.redAccent,
+        ),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (loading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-
     return Scaffold(
-      appBar: AppBar(title: const Text("Login")),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            TextField(
-              controller: emailController,
-              decoration: const InputDecoration(labelText: "Email"),
-            ),
-            TextField(
-              controller: passwordController,
-              decoration: const InputDecoration(labelText: "Password"),
-              obscureText: true,
-            ),
-            DropdownButton<String>(
-              value: selectedRole,
-              items: ['Patient', 'Delivery', 'Pharmacy']
-                  .map((r) =>
-                      DropdownMenuItem(value: r, child: Text(r)))
-                  .toList(),
-              onChanged: (val) => setState(() => selectedRole = val!),
-            ),
-            const SizedBox(height: 10),
-            ElevatedButton(onPressed: login, child: const Text("Login")),
-            TextButton(
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => RegisterScreen()),
+      backgroundColor: const Color(0xFFF8FAFF), // প্রিমিয়াম হালকা ব্যাকগ্রাউন্ড
+      body: Stack(
+        children: [
+          // পেছনের ডেকোরেশন (ডিজাইনের জন্য)
+          Positioned(
+            top: -50,
+            right: -50,
+            child: CircleAvatar(radius: 100, backgroundColor: Colors.blueAccent.withOpacity(0.05)),
+          ),
+          
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 30.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 60),
+                  
+                  // অ্যানিমেটেড আইকন সেকশন
+                  Center(
+                    child: TweenAnimationBuilder(
+                      duration: const Duration(seconds: 1),
+                      tween: Tween<double>(begin: 0, end: 1),
+                      builder: (context, double value, child) {
+                        return Opacity(
+                          opacity: value,
+                          child: Transform.scale(scale: value, child: child),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(color: Colors.blueAccent.withOpacity(0.1), blurRadius: 20)
+                          ],
+                        ),
+                        child: const Icon(Icons.medication_liquid_rounded, size: 60, color: Colors.blueAccent),
+                      ),
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 40),
+                  const Text(
+                    "Welcome Back",
+                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF1A237E)),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    "Sign in to your account",
+                    style: TextStyle(fontSize: 16, color: Colors.blueGrey),
+                  ),
+                  const SizedBox(height: 40),
+
+                  // ইমেইল ইনপুট (আপনার উইজেট থেকে)
+                  CustomTextField(
+                    controller: emailController,
+                    label: "Email Address",
+                    icon: Icons.alternate_email_rounded,
+                  ),
+                  const SizedBox(height: 20),
+
+                  // পাসওয়ার্ড ইনপুট (আপনার উইজেট থেকে)
+                  CustomTextField(
+                    controller: passwordController,
+                    label: "Password",
+                    icon: Icons.lock_outline_rounded,
+                    isPassword: true,
+                  ),
+                  const SizedBox(height: 25),
+
+                  // রোল সিলেক্টর ডিজাইন
+                  const Text("  Login As", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey)),
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 15),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10)],
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: selectedRole,
+                        isExpanded: true,
+                        icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.blueAccent),
+                        items: ['Patient', 'Delivery', 'Pharmacy']
+                            .map((r) => DropdownMenuItem(value: r, child: Text(r)))
+                            .toList(),
+                        onChanged: (val) => setState(() => selectedRole = val!),
+                      ),
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 40),
+
+                  // লগইন বাটন (আপনার উইজেট থেকে)
+                  CustomButton(
+                    text: "LOGIN",
+                    onPressed: login,
+                  ),
+
+                  const SizedBox(height: 25),
+                  
+                  // নিচে রেজিস্ট্রেশন লিঙ্ক
+                  Center(
+                    child: TextButton(
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => RegisterScreen()),
+                      ),
+                      child: RichText(
+                        text: const TextSpan(
+                          text: "Don't have an account? ",
+                          style: TextStyle(color: Colors.grey),
+                          children: [
+                            TextSpan(
+                              text: "Register Now",
+                              style: TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              child: const Text("Don't have an account? Register"),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

@@ -5,7 +5,9 @@ import '../models/medicine.dart';
 
 List<User> users = [];
 List<Medicine> allMedicines = [];
+User? currentUser;
 
+// Save all users and medicines
 Future<void> saveAllData() async {
   final prefs = await SharedPreferences.getInstance();
 
@@ -20,6 +22,7 @@ Future<void> saveAllData() async {
   );
 }
 
+// Load all users and medicines
 Future<void> loadAllData() async {
   final prefs = await SharedPreferences.getInstance();
 
@@ -37,4 +40,27 @@ Future<void> loadAllData() async {
         .map((e) => Medicine.fromMap(e))
         .toList();
   }
+}
+
+// Save logged-in user
+Future<void> saveCurrentUser(User user) async {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setString('current_user', jsonEncode(user.toMap()));
+  currentUser = user;
+}
+
+// Load logged-in user
+Future<void> loadCurrentUser() async {
+  final prefs = await SharedPreferences.getInstance();
+  final data = prefs.getString('current_user');
+  if (data != null) {
+    currentUser = User.fromMap(jsonDecode(data));
+  }
+}
+
+// Logout user
+Future<void> logoutUser() async {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.remove('current_user');
+  currentUser = null;
 }
