@@ -7,17 +7,18 @@ import 'data/dummy_data.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // ডাটা লোড হওয়া পর্যন্ত অপেক্ষা করা
   await loadAllData(); 
   
   Widget target;
   if (currentUser == null) {
-    target = LoginScreen(); // এখানে const সরানো হয়েছে আপনার এরর অনুযায়ী
+    // এখানে const সরিয়ে ফেলা হয়েছে কারণ LoginScreen const নয়
+    target = LoginScreen(); 
   } else {
     if (currentUser!.role == 'Patient') {
       target = PatientHome();
     } else {
-      // এই ১৯ নম্বর লাইনেই আপনার 'username' এরর ছিল। 
-      // এটাকে এখন pharmacyName অথবা name দিয়ে রিপ্লেস করা হয়েছে।
       target = PharmacyHome(
         pharmacyName: currentUser!.pharmacyName ?? currentUser!.name
       ); 
@@ -35,11 +36,31 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Medicine Finder',
+      title: 'Emergency Medicine Finder',
+      
       theme: ThemeData(
-        primarySwatch: Colors.blue,
         useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF0D47A1),
+          primary: const Color(0xFF0D47A1),
+          secondary: const Color(0xFF00B0FF),
+          error: const Color(0xFFD32F2F),
+        ),
+        
+        // এখানে CardTheme এর বদলে CardThemeData ব্যবহার করা হয়েছে
+        cardTheme: CardThemeData(
+          elevation: 4,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        ),
+        
+        appBarTheme: const AppBarTheme(
+          centerTitle: true,
+          backgroundColor: Color(0xFF0D47A1),
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
       ),
+      
       home: SplashScreen(targetScreen: startScreen),
     );
   }

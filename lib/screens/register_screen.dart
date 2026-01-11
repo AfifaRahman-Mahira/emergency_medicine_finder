@@ -4,14 +4,11 @@ import '../data/dummy_data.dart';
 import '../widgets/custom_design.dart'; 
 
 class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({super.key});
-
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final nameController = TextEditingController();
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   final pharmacyController = TextEditingController();
@@ -19,15 +16,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   void register() async {
     if (emailController.text.isEmpty || passwordController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Fill all fields"), backgroundColor: Colors.orangeAccent),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Fill all fields")));
       return;
     }
 
     users.add(
       User(
-        name: nameController.text.trim().isEmpty ? emailController.text.split('@')[0] : nameController.text.trim(),
+        name: emailController.text.split('@')[0], 
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
         role: selectedRole,
@@ -58,29 +53,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text("Create Account", style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: Color(0xFF1A237E))),
-              const SizedBox(height: 30),
-              CustomTextField(controller: nameController, label: "Full Name", icon: Icons.person_outline_rounded),
-              const SizedBox(height: 15),
+              const SizedBox(height: 40),
               CustomTextField(controller: emailController, label: "Email Address", icon: Icons.alternate_email_rounded),
               const SizedBox(height: 15),
               CustomTextField(controller: passwordController, label: "Password", icon: Icons.lock_outline_rounded, isPassword: true),
-              const SizedBox(height: 25),
+              const SizedBox(height: 20),
               const Text("  Register As", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey)),
               const SizedBox(height: 10),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 15),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10)],
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: selectedRole,
-                    isExpanded: true,
-                    items: ['Patient', 'Delivery', 'Pharmacy'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-                    onChanged: (v) => setState(() => selectedRole = v!),
-                  ),
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+                child: DropdownButton<String>(
+                  value: selectedRole,
+                  isExpanded: true,
+                  underline: const SizedBox(),
+                  items: ['Patient', 'Delivery', 'Pharmacy'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                  onChanged: (v) => setState(() => selectedRole = v!),
                 ),
               ),
               if (selectedRole == 'Pharmacy') ...[

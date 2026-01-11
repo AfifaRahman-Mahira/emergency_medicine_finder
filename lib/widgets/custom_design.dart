@@ -31,28 +31,32 @@ class CustomTextField extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          gradient: LinearGradient(
-            colors: [Colors.white, Colors.blue.withValues(alpha: 0.05)],
-          ),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
+              color: const Color(0xFF1A237E).withValues(alpha: 0.05),
+              blurRadius: 15,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
         child: TextField(
           controller: controller,
           obscureText: isPassword,
+          style: const TextStyle(fontSize: 16, color: Color(0xFF1A237E)),
           decoration: InputDecoration(
             labelText: label,
-            prefixIcon: Icon(icon, color: Colors.blueAccent),
-            border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-            labelStyle: const TextStyle(color: Colors.grey, fontSize: 14),
-            floatingLabelStyle: const TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold),
+            labelStyle: const TextStyle(color: Colors.blueGrey, fontSize: 14),
+            prefixIcon: Icon(icon, color: const Color(0xFF00B0FF)),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide.none,
+            ),
+            filled: true,
+            fillColor: Colors.transparent,
+            contentPadding: const EdgeInsets.all(20),
+            floatingLabelStyle: const TextStyle(color: Color(0xFF00B0FF), fontWeight: FontWeight.bold),
           ),
         ),
       ),
@@ -63,8 +67,14 @@ class CustomTextField extends StatelessWidget {
 class CustomButton extends StatefulWidget {
   final String text;
   final VoidCallback onPressed;
+  final bool isEmergency;
 
-  const CustomButton({super.key, required this.text, required this.onPressed});
+  const CustomButton({
+    super.key, 
+    required this.text, 
+    required this.onPressed,
+    this.isEmergency = false,
+  });
 
   @override
   State<CustomButton> createState() => _CustomButtonState();
@@ -77,10 +87,7 @@ class _CustomButtonState extends State<CustomButton> with SingleTickerProviderSt
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 100),
-    );
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 100));
     _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(_controller);
   }
 
@@ -98,23 +105,26 @@ class _CustomButtonState extends State<CustomButton> with SingleTickerProviderSt
         _controller.reverse();
         widget.onPressed();
       },
+      onTapCancel: () => _controller.reverse(),
       child: ScaleTransition(
         scale: _scaleAnimation,
         child: Container(
           width: double.infinity,
           height: 60,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            gradient: const LinearGradient(
-              colors: [Color(0xFF448AFF), Color(0xFF2979FF)],
+            borderRadius: BorderRadius.circular(16),
+            gradient: LinearGradient(
+              colors: widget.isEmergency 
+                ? [const Color(0xFFFF5252), const Color(0xFFD32F2F)]
+                : [const Color(0xFF00B0FF), const Color(0xFF0091EA), const Color(0xFF01579B)],
               begin: Alignment.centerLeft,
               end: Alignment.centerRight,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.blue.withValues(alpha: 0.4),
-                blurRadius: 15,
-                offset: const Offset(0, 8),
+                color: (widget.isEmergency ? Colors.redAccent : Colors.blueAccent).withValues(alpha: 0.3),
+                blurRadius: 12,
+                offset: const Offset(0, 6),
               ),
             ],
           ),

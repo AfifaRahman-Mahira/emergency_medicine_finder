@@ -1,113 +1,135 @@
 import 'package:flutter/material.dart';
+import '../widgets/custom_design.dart';
+import '../models/medicine.dart'; // পাথ ঠিক করা হয়েছে
 import '../data/dummy_data.dart';
-import '../models/medicine.dart';
-import 'login_screen.dart';
 
 class PharmacyHome extends StatefulWidget {
   final String pharmacyName;
-  PharmacyHome({required this.pharmacyName});
+  const PharmacyHome({super.key, required this.pharmacyName});
 
   @override
   State<PharmacyHome> createState() => _PharmacyHomeState();
 }
 
 class _PharmacyHomeState extends State<PharmacyHome> {
-  final nameCtrl = TextEditingController();
-  final genericCtrl = TextEditingController();
-  final priceCtrl = TextEditingController();
-  final stockCtrl = TextEditingController();
+  final nameController = TextEditingController();
+  final priceController = TextEditingController();
+  final stockController = TextEditingController();
+  final genericController = TextEditingController();
 
-  void addMedicine() async {
-    if (nameCtrl.text.isEmpty || priceCtrl.text.isEmpty) return;
+  void _addMedicine() {
+    if (nameController.text.isEmpty || priceController.text.isEmpty) return;
 
     setState(() {
-      allMedicines.add(
-        Medicine(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          name: nameCtrl.text.trim(),
-          genericName: genericCtrl.text.isEmpty ? "General" : genericCtrl.text.trim(),
-          pharmacyName: widget.pharmacyName, // এটি ওনারের ফার্মেসির নাম অটো নিবে
-          price: double.tryParse(priceCtrl.text) ?? 0.0,
-          stock: int.tryParse(stockCtrl.text) ?? 0,
-          location: "Current Location", // এখানে আপনি রিয়েল লোকেশন ডাইনামিক করতে পারেন
-          distance: 0.0, // নিজের ফার্মেসির দূরত্ব ০ দেখাবে
-        ),
-      );
+      globalMedicines.add(Medicine(
+        id: DateTime.now().toString(),
+        name: nameController.text,
+        generic: genericController.text.isEmpty ? "General" : genericController.text,
+        genericName: nameController.text,
+        price: double.parse(priceController.text),
+        stock: int.parse(stockController.text),
+        pharmacyName: widget.pharmacyName,
+        location: "Dhaka",
+        distance: 0.0,
+        alternatives: ["Napa", "Ace"],
+      ));
     });
     
-    await saveAllData();
+    nameController.clear();
+    priceController.clear();
+    stockController.clear();
+    genericController.clear();
     Navigator.pop(context);
-    nameCtrl.clear(); genericCtrl.clear(); priceCtrl.clear(); stockCtrl.clear();
   }
 
   @override
   Widget build(BuildContext context) {
-    // লজিক: শুধু এই ফার্মেসির ওষুধগুলো ফিল্টার করো
-    final myMeds = allMedicines.where((m) => m.pharmacyName == widget.pharmacyName).toList();
+    final myMedicines = globalMedicines.where((m) => m.pharmacyName == widget.pharmacyName).toList();
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF4F7FF),
       appBar: AppBar(
         title: Text(widget.pharmacyName),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.red),
-            onPressed: () async {
-              await logoutUser();
-              Navigator.pushAndRemoveUntil(
-                context, MaterialPageRoute(builder: (_) => LoginScreen()), (_) => false);
-            },
-          )
-        ],
-      ),
-      body: myMeds.isEmpty 
-          ? const Center(child: Text("You haven't added any medicine yet!"))
-          : ListView.builder(
-              itemCount: myMeds.length,
-              itemBuilder: (_, i) => Card(
-                margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                elevation: 3,
-                child: ListTile(
-                  leading: const CircleAvatar(backgroundColor: Colors.blueAccent, child: Icon(Icons.medication, color: Colors.white)),
-                  title: Text(myMeds[i].name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text("Generic: ${myMeds[i].genericName}\nStock: ${myMeds[i].stock}"),
-                  isThreeLine: true,
-                  trailing: Text("${myMeds[i].price} BDT", style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 16)),
-                ),
-              ),
-            ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddDialog,
         backgroundColor: Colors.blueAccent,
-        child: const Icon(Icons.add, color: Colors.white),
+        actions: [IconButton(icon: const Icon(Icons.logout), onPressed: () => Navigator.pop(context))],
+      ),
+      body: Column(
+        children: [
+          _buildHeader(),
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text("Inventory", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                ElevatedButton(onPressed: () => _showAddSheet(), child: const Text("Add New")),
+              ],
+            ),
+          ),
+          Expanded(
+            child: ListView.builder(
+              itemCount: myMedicines.length,
+              itemBuilder: (context, index) {
+                final med = myMedicines[index];
+                return Card(
+                  margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+                  child: ListTile(
+                    title: Text(med.name),
+                    subtitle: Text("৳${med.price} | Stock: ${med.stock}"),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(icon: const Icon(Icons.remove), onPressed: () => setState(() => med.stock--)),
+                        Text("${med.stock}"),
+                        IconButton(icon: const Icon(Icons.add), onPressed: () => setState(() => med.stock++)),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  void _showAddDialog() {
-    showDialog(
+  void _showAddSheet() {
+    showModalBottomSheet(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("Add New Medicine"),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: "Medicine Name")),
-              TextField(controller: genericCtrl, decoration: const InputDecoration(labelText: "Generic Name")),
-              TextField(controller: priceCtrl, decoration: const InputDecoration(labelText: "Price"), keyboardType: TextInputType.number),
-              TextField(controller: stockCtrl, decoration: const InputDecoration(labelText: "Stock Amount"), keyboardType: TextInputType.number),
-            ],
-          ),
+      isScrollControlled: true,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 20, right: 20, top: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CustomTextField(controller: nameController, label: "Medicine Name", icon: Icons.medication),
+            CustomTextField(controller: genericController, label: "Generic Name", icon: Icons.science),
+            Row(
+              children: [
+                Expanded(child: CustomTextField(controller: priceController, label: "Price", icon: Icons.attach_money)),
+                const SizedBox(width: 10),
+                Expanded(child: CustomTextField(controller: stockController, label: "Stock", icon: Icons.inventory)),
+              ],
+            ),
+            const SizedBox(height: 20),
+            CustomButton(text: "SAVE", onPressed: _addMedicine),
+            const SizedBox(height: 20),
+          ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
-          ElevatedButton(
-            onPressed: addMedicine, 
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent),
-            child: const Text("Add", style: TextStyle(color: Colors.white)),
-          ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      color: Colors.blueAccent,
+      child: const Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          Column(children: [Icon(Icons.star, color: Colors.white), Text("4.5", style: TextStyle(color: Colors.white))]),
+          Column(children: [Icon(Icons.location_on, color: Colors.white), Text("Dhaka", style: TextStyle(color: Colors.white))]),
         ],
       ),
     );

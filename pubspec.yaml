@@ -8,4 +8,13 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  shared_preferences: ^2.2.2 # এটি যোগ করুন
+  shared_preferences: ^2.2.2
+  cupertino_icons: ^1.0.6 # এটি আইকন সাপোর্ট বাড়াবে
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true 
