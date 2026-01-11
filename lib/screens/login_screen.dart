@@ -44,10 +44,12 @@ class _LoginScreenState extends State<LoginScreen> {
         String dbRole = userData['role'];
 
         if (dbRole != _selectedRole) {
-          throw FirebaseAuthException(code: 'wrong-role', message: "Role mismatch! You are registered as $dbRole");
+          throw FirebaseAuthException(
+            code: 'wrong-role', 
+            message: "Role mismatch! You are registered as $dbRole"
+          );
         }
 
-        // আপনার দেওয়া মডেল অনুযায়ী id/uid ছাড়া currentUser সেট করা হলো
         currentUser = my_user.User(
           name: userData['name'] ?? '',
           email: userData['email'] ?? '',
@@ -62,12 +64,15 @@ class _LoginScreenState extends State<LoginScreen> {
         } else if (dbRole == 'Delivery') {
           next = DeliveryHome(); 
         } else {
-          next = PharmacyHome(pharmacyName: userData['pharmacyName'] ?? userData['name']);
+          String pName = userData['pharmacyName'] ?? userData['name'];
+          next = PharmacyHome(pharmacyName: pName);
         }
 
         if (mounted) {
           Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => next));
         }
+      } else {
+        throw FirebaseAuthException(code: 'user-not-found', message: "User data not found in database");
       }
     } on FirebaseAuthException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -96,7 +101,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     shape: BoxShape.circle,
-                    boxShadow: [BoxShadow(color: Colors.blueAccent.withValues(alpha: 0.1), blurRadius: 20)],
+                    boxShadow: [BoxShadow(color: Colors.blueAccent.withOpacity(0.1), blurRadius: 20)],
                   ),
                   child: const Icon(Icons.medication_liquid_rounded, size: 60, color: Colors.blueAccent),
                 ),
@@ -108,7 +113,6 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 20),
               CustomTextField(controller: passwordController, label: "Password", icon: Icons.lock_outline_rounded, isPassword: true),
               const SizedBox(height: 20),
-              
               const Text("Login As", style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               Container(
@@ -116,25 +120,19 @@ class _LoginScreenState extends State<LoginScreen> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.blueAccent.withValues(alpha: 0.2)),
+                  border: Border.all(color: Colors.blueAccent.withOpacity(0.2)),
                 ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
                     value: _selectedRole,
                     isExpanded: true,
                     items: ['Patient', 'Pharmacy', 'Delivery'].map((String value) {
-                      return DropdownMenuItem<String>(
-                        value: value,
-                        child: Text(value),
-                      );
+                      return DropdownMenuItem<String>(value: value, child: Text(value));
                     }).toList(),
-                    onChanged: (newValue) {
-                      setState(() => _selectedRole = newValue!);
-                    },
+                    onChanged: (newValue) => setState(() => _selectedRole = newValue!),
                   ),
                 ),
               ),
-              
               const SizedBox(height: 40),
               isLoading 
                 ? const Center(child: CircularProgressIndicator())

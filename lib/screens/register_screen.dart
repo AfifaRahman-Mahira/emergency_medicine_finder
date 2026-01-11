@@ -11,8 +11,11 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
-  final nameController = TextEditingController(); // নতুন ফিল্ড
+  final nameController = TextEditingController(); 
   final pharmacyController = TextEditingController();
+  final phoneController = TextEditingController();
+  final addressController = TextEditingController(); 
+  
   String selectedRole = 'Patient';
   bool isLoading = false;
 
@@ -25,21 +28,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => isLoading = true);
 
     try {
-      // ১. Firebase Auth এ ইউজার তৈরি করা
       UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
       );
 
-      // ২. Firestore এ ইউজারের বিস্তারিত তথ্য সেভ করা
-      await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set({
+      Map<String, dynamic> userData = {
         'uid': userCredential.user!.uid,
         'name': nameController.text.isEmpty ? emailController.text.split('@')[0] : nameController.text,
         'email': emailController.text.trim(),
         'role': selectedRole,
-        'pharmacyName': selectedRole == 'Pharmacy' ? pharmacyController.text.trim() : null,
         'createdAt': DateTime.now(),
-      });
+      };
+
+      if (selectedRole == 'Pharmacy') {
+        userData['pharmacyName'] = pharmacyController.text.trim();
+        
+        await FirebaseFirestore.instance.collection('pharmacies').doc(userCredential.user!.uid).set({
+          'uid': userCredential.user!.uid,
+          'name': pharmacyController.text.trim(),
+          'phone': phoneController.text.trim(),
+          'address': addressController.text.trim(),
+          'rating': 5.0,
+          'isVerified': true,
+        });
+      }
+
+      await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set(userData);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Registration Successful!")));
@@ -73,9 +88,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               const Text("Create Account", style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: Color(0xFF1A237E))),
               const SizedBox(height: 30),
               CustomTextField(controller: nameController, label: "Full Name", icon: Icons.person_outline_rounded),
-              const SizedBox(height: 15),
               CustomTextField(controller: emailController, label: "Email Address", icon: Icons.alternate_email_rounded),
-              const SizedBox(height: 15),
               CustomTextField(controller: passwordController, label: "Password", icon: Icons.lock_outline_rounded, isPassword: true),
               const SizedBox(height: 20),
               const Text("  Register As", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey)),
@@ -92,13 +105,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
               ),
               if (selectedRole == 'Pharmacy') ...[
-                const SizedBox(height: 20),
+                const SizedBox(height: 15),
                 CustomTextField(controller: pharmacyController, label: "Pharmacy Name", icon: Icons.local_pharmacy_rounded),
+                CustomTextField(controller: phoneController, label: "Contact Number", icon: Icons.phone),
+                CustomTextField(controller: addressController, label: "Pharmacy Address", icon: Icons.location_on),
               ],
               const SizedBox(height: 40),
               isLoading 
                 ? const Center(child: CircularProgressIndicator()) 
                 : CustomButton(text: "REGISTER", onPressed: register),
+                const SizedBox(height: 20),
             ],
           ),
         ),
