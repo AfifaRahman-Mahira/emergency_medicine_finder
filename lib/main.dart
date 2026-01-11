@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'screens/splash_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/patient_home.dart';
@@ -7,16 +9,20 @@ import 'data/dummy_data.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // ডাটা লোড হওয়া পর্যন্ত অপেক্ষা করা
+
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   await loadAllData(); 
   
   Widget target;
   if (currentUser == null) {
-    // এখানে const সরিয়ে ফেলা হয়েছে কারণ LoginScreen const নয়
+    // এখানে 'const' সরিয়ে দেওয়া হয়েছে
     target = LoginScreen(); 
   } else {
     if (currentUser!.role == 'Patient') {
+      // এখানেও 'const' সরিয়ে দেওয়া হয়েছে
       target = PatientHome();
     } else {
       target = PharmacyHome(
@@ -37,7 +43,6 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Emergency Medicine Finder',
-      
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
@@ -46,13 +51,10 @@ class MyApp extends StatelessWidget {
           secondary: const Color(0xFF00B0FF),
           error: const Color(0xFFD32F2F),
         ),
-        
-        // এখানে CardTheme এর বদলে CardThemeData ব্যবহার করা হয়েছে
         cardTheme: CardThemeData(
           elevation: 4,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ),
-        
         appBarTheme: const AppBarTheme(
           centerTitle: true,
           backgroundColor: Color(0xFF0D47A1),
@@ -60,7 +62,6 @@ class MyApp extends StatelessWidget {
           elevation: 0,
         ),
       ),
-      
       home: SplashScreen(targetScreen: startScreen),
     );
   }

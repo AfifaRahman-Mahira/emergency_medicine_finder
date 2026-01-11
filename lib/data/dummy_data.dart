@@ -1,6 +1,6 @@
 import '../models/medicine.dart';
 import '../models/user.dart';
-
+import 'package:shared_preferences/shared_preferences.dart';
 List<Medicine> globalMedicines = [];
 List<User> users = []; 
 User? currentUser;
@@ -15,5 +15,7 @@ Future<void> saveAllData() async {
 
 Future<void> saveCurrentUser(User user) async {
   currentUser = user;
-  await Future.delayed(const Duration(milliseconds: 100));
+  final prefs = await SharedPreferences.getInstance();
+  // save user email
+  await prefs.setString('user_email', user.email);
 }

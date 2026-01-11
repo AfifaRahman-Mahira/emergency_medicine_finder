@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // ফায়ারবেস ইমপোর্ট
 import '../widgets/custom_design.dart';
-import '../models/medicine.dart'; // পাথ ঠিক করা হয়েছে
-import '../data/dummy_data.dart';
+import '../models/medicine.dart';
 
 class PharmacyHome extends StatefulWidget {
   final String pharmacyName;
@@ -17,35 +17,33 @@ class _PharmacyHomeState extends State<PharmacyHome> {
   final stockController = TextEditingController();
   final genericController = TextEditingController();
 
-  void _addMedicine() {
+  // ডাটাবেসে ঔষধ সেভ করার ফাংশন
+  void _addMedicine() async {
     if (nameController.text.isEmpty || priceController.text.isEmpty) return;
 
-    setState(() {
-      globalMedicines.add(Medicine(
-        id: DateTime.now().toString(),
-        name: nameController.text,
-        generic: genericController.text.isEmpty ? "General" : genericController.text,
-        genericName: nameController.text,
-        price: double.parse(priceController.text),
-        stock: int.parse(stockController.text),
-        pharmacyName: widget.pharmacyName,
-        location: "Dhaka",
-        distance: 0.0,
-        alternatives: ["Napa", "Ace"],
-      ));
-    });
-    
-    nameController.clear();
-    priceController.clear();
-    stockController.clear();
-    genericController.clear();
-    Navigator.pop(context);
+    try {
+      await FirebaseFirestore.instance.collection('medicines').add({
+        'name': nameController.text.trim(),
+        'generic': genericController.text.isEmpty ? "General" : genericController.text.trim(),
+        'price': double.tryParse(priceController.text) ?? 0.0,
+        'stock': int.tryParse(stockController.text) ?? 0,
+        'pharmacyName': widget.pharmacyName,
+        'location': "Dhaka",
+        'timestamp': FieldValue.serverTimestamp(), // সময় রেকর্ড রাখা
+      });
+
+      nameController.clear();
+      priceController.clear();
+      stockController.clear();
+      genericController.clear();
+      Navigator.pop(context);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final myMedicines = globalMedicines.where((m) => m.pharmacyName == widget.pharmacyName).toList();
-
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7FF),
       appBar: AppBar(
@@ -66,25 +64,55 @@ class _PharmacyHomeState extends State<PharmacyHome> {
               ],
             ),
           ),
+          // রিয়েল-টাইম ডাটা দেখানোর জন্য StreamBuilder
           Expanded(
-            child: ListView.builder(
-              itemCount: myMedicines.length,
-              itemBuilder: (context, index) {
-                final med = myMedicines[index];
-                return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
-                  child: ListTile(
-                    title: Text(med.name),
-                    subtitle: Text("৳${med.price} | Stock: ${med.stock}"),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(icon: const Icon(Icons.remove), onPressed: () => setState(() => med.stock--)),
-                        Text("${med.stock}"),
-                        IconButton(icon: const Icon(Icons.add), onPressed: () => setState(() => med.stock++)),
-                      ],
-                    ),
-                  ),
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('medicines')
+                  .where('pharmacyName', isEqualTo: widget.pharmacyName)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) return const Center(child: Text("Error loading data"));
+                if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+
+                final meds = snapshot.data!.docs;
+
+                if (meds.isEmpty) return const Center(child: Text("No medicines added yet."));
+
+                return ListView.builder(
+                  itemCount: meds.length,
+                  itemBuilder: (context, index) {
+                    var data = meds[index].data() as Map<String, dynamic>;
+                    var docId = meds[index].id;
+
+                    return Card(
+                      margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+                      child: ListTile(
+                        title: Text(data['name'] ?? ''),
+                        subtitle: Text("৳${data['price']} | Stock: ${data['stock']}"),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.remove, color: Colors.red),
+                              onPressed: () {
+                                if (data['stock'] > 0) {
+                                  FirebaseFirestore.instance.collection('medicines').doc(docId).update({'stock': data['stock'] - 1});
+                                }
+                              },
+                            ),
+                            Text("${data['stock']}"),
+                            IconButton(
+                              icon: const Icon(Icons.add, color: Colors.green),
+                              onPressed: () {
+                                FirebaseFirestore.instance.collection('medicines').doc(docId).update({'stock': data['stock'] + 1});
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 );
               },
             ),
@@ -94,6 +122,7 @@ class _PharmacyHomeState extends State<PharmacyHome> {
     );
   }
 
+  // ... বাকি _showAddSheet এবং _buildHeader কোড একই থাকবে ...
   void _showAddSheet() {
     showModalBottomSheet(
       context: context,

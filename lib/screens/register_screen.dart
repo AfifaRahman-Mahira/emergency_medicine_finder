@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../models/user.dart';
-import '../data/dummy_data.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/custom_design.dart'; 
 
 class RegisterScreen extends StatefulWidget {
@@ -11,8 +11,10 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
+  final nameController = TextEditingController(); // নতুন ফিল্ড
   final pharmacyController = TextEditingController();
   String selectedRole = 'Patient';
+  bool isLoading = false;
 
   void register() async {
     if (emailController.text.isEmpty || passwordController.text.isEmpty) {
@@ -20,18 +22,34 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
-    users.add(
-      User(
-        name: emailController.text.split('@')[0], 
+    setState(() => isLoading = true);
+
+    try {
+      // ১. Firebase Auth এ ইউজার তৈরি করা
+      UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
-        role: selectedRole,
-        pharmacyName: selectedRole == 'Pharmacy' ? pharmacyController.text.trim() : null,
-      ),
-    );
+      );
 
-    await saveAllData(); 
-    if (mounted) Navigator.pop(context); 
+      // ২. Firestore এ ইউজারের বিস্তারিত তথ্য সেভ করা
+      await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set({
+        'uid': userCredential.user!.uid,
+        'name': nameController.text.isEmpty ? emailController.text.split('@')[0] : nameController.text,
+        'email': emailController.text.trim(),
+        'role': selectedRole,
+        'pharmacyName': selectedRole == 'Pharmacy' ? pharmacyController.text.trim() : null,
+        'createdAt': DateTime.now(),
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Registration Successful!")));
+        Navigator.pop(context);
+      }
+    } on FirebaseAuthException catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message ?? "Error occurred")));
+    } finally {
+      if (mounted) setState(() => isLoading = false);
+    }
   }
 
   @override
@@ -53,7 +71,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text("Create Account", style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: Color(0xFF1A237E))),
-              const SizedBox(height: 40),
+              const SizedBox(height: 30),
+              CustomTextField(controller: nameController, label: "Full Name", icon: Icons.person_outline_rounded),
+              const SizedBox(height: 15),
               CustomTextField(controller: emailController, label: "Email Address", icon: Icons.alternate_email_rounded),
               const SizedBox(height: 15),
               CustomTextField(controller: passwordController, label: "Password", icon: Icons.lock_outline_rounded, isPassword: true),
@@ -76,7 +96,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 CustomTextField(controller: pharmacyController, label: "Pharmacy Name", icon: Icons.local_pharmacy_rounded),
               ],
               const SizedBox(height: 40),
-              CustomButton(text: "REGISTER", onPressed: register),
+              isLoading 
+                ? const Center(child: CircularProgressIndicator()) 
+                : CustomButton(text: "REGISTER", onPressed: register),
             ],
           ),
         ),

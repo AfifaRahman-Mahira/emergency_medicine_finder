@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
-import '../data/dummy_data.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'register_screen.dart';
 import 'patient_home.dart';
 import 'delivery_home.dart';
 import 'pharmacy_home.dart';
 import '../widgets/custom_design.dart';
+import '../data/dummy_data.dart'; 
+import '../models/user.dart' as my_user;
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -14,41 +17,65 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
-  String selectedRole = 'Patient';
+  String _selectedRole = 'Patient'; 
+  bool isLoading = false;
 
   void login() async {
+    if (emailController.text.isEmpty || passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please fill all fields")));
+      return;
+    }
+
+    setState(() => isLoading = true);
+
     try {
-      final user = users.firstWhere(
-        (u) =>
-            u.email == emailController.text.trim() &&
-            u.password == passwordController.text.trim() &&
-            u.role == selectedRole,
+      UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
       );
 
-      await saveCurrentUser(user);
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userCredential.user!.uid)
+          .get();
 
-      Widget next;
-      if (user.role == 'Patient') {
-        next = PatientHome();
-      } else if (user.role == 'Delivery') {
-        next = DeliveryHome();
-      } else {
-        next = PharmacyHome(
-          pharmacyName: user.pharmacyName ?? user.name,
+      if (userDoc.exists) {
+        Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
+        String dbRole = userData['role'];
+
+        if (dbRole != _selectedRole) {
+          throw FirebaseAuthException(code: 'wrong-role', message: "Role mismatch! You are registered as $dbRole");
+        }
+
+        // আপনার দেওয়া মডেল অনুযায়ী id/uid ছাড়া currentUser সেট করা হলো
+        currentUser = my_user.User(
+          name: userData['name'] ?? '',
+          email: userData['email'] ?? '',
+          password: passwordController.text.trim(),
+          role: dbRole,
+          pharmacyName: userData['pharmacyName'],
         );
-      }
 
-      if (mounted) {
-        Navigator.pushReplacement(
-            context, MaterialPageRoute(builder: (_) => next));
+        Widget next;
+        if (dbRole == 'Patient') {
+          next = PatientHome(); 
+        } else if (dbRole == 'Delivery') {
+          next = DeliveryHome(); 
+        } else {
+          next = PharmacyHome(pharmacyName: userData['pharmacyName'] ?? userData['name']);
+        }
+
+        if (mounted) {
+          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => next));
+        }
       }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Invalid email / password / role"),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
+    } on FirebaseAuthException catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(e.message ?? "Login Failed"),
+        backgroundColor: Colors.redAccent,
+      ));
+    } finally {
+      if (mounted) setState(() => isLoading = false);
     }
   }
 
@@ -80,29 +107,38 @@ class _LoginScreenState extends State<LoginScreen> {
               CustomTextField(controller: emailController, label: "Email Address", icon: Icons.alternate_email_rounded),
               const SizedBox(height: 20),
               CustomTextField(controller: passwordController, label: "Password", icon: Icons.lock_outline_rounded, isPassword: true),
-              const SizedBox(height: 25),
-              const Text("  Login As", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey)),
-              const SizedBox(height: 10),
+              const SizedBox(height: 20),
+              
+              const Text("Login As", style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 15),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10)],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.blueAccent.withValues(alpha: 0.2)),
                 ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
-                    value: selectedRole,
+                    value: _selectedRole,
                     isExpanded: true,
-                    items: ['Patient', 'Delivery', 'Pharmacy']
-                        .map((r) => DropdownMenuItem(value: r, child: Text(r)))
-                        .toList(),
-                    onChanged: (val) => setState(() => selectedRole = val!),
+                    items: ['Patient', 'Pharmacy', 'Delivery'].map((String value) {
+                      return DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(value),
+                      );
+                    }).toList(),
+                    onChanged: (newValue) {
+                      setState(() => _selectedRole = newValue!);
+                    },
                   ),
                 ),
               ),
+              
               const SizedBox(height: 40),
-              CustomButton(text: "LOGIN", onPressed: login),
+              isLoading 
+                ? const Center(child: CircularProgressIndicator())
+                : CustomButton(text: "LOGIN", onPressed: login),
               const SizedBox(height: 25),
               Center(
                 child: TextButton(
