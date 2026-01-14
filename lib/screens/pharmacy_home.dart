@@ -30,7 +30,7 @@ class _PharmacyHomeState extends State<PharmacyHome> {
 
   String pPhone = "Loading...";
   String pAddress = "Loading...";
-  double pRating = 0.0; // Default set to 0.0
+  double pRating = 0.0; 
   String currentPharmacyName = "";
   String? selectedCity; 
   final List<String> cities = ['Dhaka', 'Chittagong', 'Sylhet', 'Rajshahi', 'Khulna', 'Barisal', 'Rangpur', 'Mymensingh'];
@@ -42,30 +42,30 @@ class _PharmacyHomeState extends State<PharmacyHome> {
     _fetchPharmacyProfile();
   }
 
-  // Fetch pharmacy profile from 'users' collection
+  // Fetch pharmacy profile
   void _fetchPharmacyProfile() async {
     String uid = FirebaseAuth.instance.currentUser?.uid ?? "";
     if (uid.isNotEmpty) {
-      var doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-      if (doc.exists) {
-        setState(() {
-          currentPharmacyName = doc.data()?['pharmacyName'] ?? doc.data()?['name'] ?? widget.pharmacyName;
-          pPhone = doc.data()?['phone'] ?? "No Phone Found";
-          pAddress = doc.data()?['address'] ?? "No Address Found";
-          // If no rating field exists, it will remain 0.0
-          pRating = (doc.data()?['rating'] ?? 0.0).toDouble();
-        });
-      }
+      FirebaseFirestore.instance.collection('users').doc(uid).snapshots().listen((doc) {
+        if (doc.exists && mounted) {
+          setState(() {
+            currentPharmacyName = doc.data()?['pharmacyName'] ?? doc.data()?['name'] ?? widget.pharmacyName;
+            pPhone = doc.data()?['phone'] ?? "No Phone Found";
+            pAddress = doc.data()?['address'] ?? "No Address Found";
+            pRating = (doc.data()?['rating'] ?? 0.0).toDouble();
+          });
+        }
+      });
     }
   }
 
-  // Delete medicine from Firestore
+  // Delete medicine
   void _deleteMedicine(String docId) async {
     bool confirm = await showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text("Delete Medicine"),
-        content: const Text("Are you sure you want to remove this item from inventory?"),
+        content: const Text("Are you sure you want to remove this item?"),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("CANCEL")),
           TextButton(
@@ -120,36 +120,20 @@ class _PharmacyHomeState extends State<PharmacyHome> {
                   decoration: InputDecoration(
                     prefixIcon: const Icon(Icons.map_outlined),
                     filled: true,
-                    fillColor: Colors.blue.withValues(alpha: 0.05),
+                    fillColor: Colors.blue.withOpacity(0.05),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                   ),
                   items: cities.map((city) => DropdownMenuItem(value: city, child: Text(city))).toList(),
-                  onChanged: (val) {
-                    setModalState(() => selectedCity = val);
-                  },
+                  onChanged: (val) => setModalState(() => selectedCity = val),
                 ),
                 const SizedBox(height: 15),
                 CustomTextField(controller: editAddressController, label: "Detailed Road/Area Name", icon: Icons.location_on),
-                TextButton.icon(
-                  onPressed: () async {
-                    LocationPermission permission = await Geolocator.requestPermission();
-                    if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
-                      setModalState(() => editAddressController.text = "Fetching GPS...");
-                      Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-                      setModalState(() => editAddressController.text = "Lat: ${position.latitude}, Lon: ${position.longitude}");
-                    }
-                  },
-                  icon: const Icon(Icons.my_location, color: Colors.blue),
-                  label: const Text("Set Current Location via GPS"),
-                ),
                 const SizedBox(height: 20),
                 CustomButton(
                   text: "SAVE ALL CHANGES", 
                   onPressed: () async {
                     String uid = FirebaseAuth.instance.currentUser?.uid ?? "";
-                    String cityPart = selectedCity ?? "Dhaka";
-                    String detailPart = editAddressController.text.trim();
-                    String finalAddress = "$cityPart, $detailPart";
+                    String finalAddress = "${selectedCity ?? "Dhaka"}, ${editAddressController.text.trim()}";
                     
                     try {
                       await FirebaseFirestore.instance.collection('users').doc(uid).set({
@@ -157,17 +141,15 @@ class _PharmacyHomeState extends State<PharmacyHome> {
                         'name': editNameController.text.trim(),
                         'phone': editPhoneController.text.trim(),
                         'address': finalAddress,
+                        'city': selectedCity ?? "Dhaka",
                       }, SetOptions(merge: true));
 
-                      _fetchPharmacyProfile(); 
                       if (context.mounted) {
                         Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("Profile Updated Successfully!"), backgroundColor: Colors.green)
-                        );
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Profile Updated!"), backgroundColor: Colors.green));
                       }
                     } catch (e) {
-                      debugPrint("Error updating profile: $e");
+                      debugPrint("Error: $e");
                     }
                   }
                 ),
@@ -180,8 +162,12 @@ class _PharmacyHomeState extends State<PharmacyHome> {
     );
   }
 
+  // --- ADD MEDICINE (CRITICAL FIXES HERE) ---
   void _addMedicine() async {
-    if (nameController.text.isEmpty || priceController.text.isEmpty) return;
+    if (nameController.text.isEmpty || priceController.text.isEmpty) {
+       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please fill Name and Price")));
+       return;
+    }
     try {
       await FirebaseFirestore.instance.collection('medicines').add({
         'name': nameController.text.trim(),
@@ -189,7 +175,8 @@ class _PharmacyHomeState extends State<PharmacyHome> {
         'price': double.tryParse(priceController.text) ?? 0.0,
         'stock': int.tryParse(stockController.text) ?? 0,
         'pharmacyName': currentPharmacyName,
-        'location': pAddress, 
+        'location': pAddress, // Full Address for patient search
+        'phone': pPhone,     // Phone number added for direct calling
         'timestamp': FieldValue.serverTimestamp(),
       });
       nameController.clear(); priceController.clear(); stockController.clear(); genericController.clear();
@@ -241,8 +228,9 @@ class _PharmacyHomeState extends State<PharmacyHome> {
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7FF),
       appBar: AppBar(
-        title: Text(currentPharmacyName),
+        title: Text(currentPharmacyName, style: const TextStyle(color: Colors.white)),
         backgroundColor: Colors.blueAccent,
+        iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(icon: const Icon(Icons.account_circle), onPressed: () => _showPharmacyProfile()),
           IconButton(icon: const Icon(Icons.logout), onPressed: () => Navigator.pop(context)),
@@ -252,7 +240,6 @@ class _PharmacyHomeState extends State<PharmacyHome> {
         children: [
           _buildHeader(),
           
-          // Search Bar Implementation
           Padding(
             padding: const EdgeInsets.fromLTRB(15, 15, 15, 5),
             child: TextField(
@@ -263,16 +250,9 @@ class _PharmacyHomeState extends State<PharmacyHome> {
                 filled: true,
                 fillColor: Colors.white,
                 contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(15),
-                  borderSide: BorderSide.none,
-                ),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
               ),
-              onChanged: (value) {
-                setState(() {
-                  searchQuery = value.toLowerCase();
-                });
-              },
+              onChanged: (value) => setState(() => searchQuery = value.toLowerCase()),
             ),
           ),
 
@@ -301,7 +281,6 @@ class _PharmacyHomeState extends State<PharmacyHome> {
                 if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) return const Center(child: Text("No medicines added yet."));
                 
-                // Filter list based on search query
                 final meds = snapshot.data!.docs.where((doc) {
                   return doc['name'].toString().toLowerCase().contains(searchQuery);
                 }).toList();
@@ -317,14 +296,12 @@ class _PharmacyHomeState extends State<PharmacyHome> {
                       margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
                       child: ListTile(
                         onTap: () => _showAlternatives(data['generic'], data['name']),
-                        onLongPress: () => _deleteMedicine(docId), // Long press to delete
                         title: Text(data['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
                         subtitle: Text("${data['generic']} | ৳${data['price']}"),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             _buildStockControls(docId, data['stock']),
-                            const SizedBox(width: 5),
                             IconButton(
                               icon: const Icon(Icons.delete_outline, color: Colors.grey, size: 20),
                               onPressed: () => _deleteMedicine(docId),
@@ -370,12 +347,6 @@ class _PharmacyHomeState extends State<PharmacyHome> {
           mainAxisSize: MainAxisSize.min,
           children: [
             const Text("Quick Inventory Update", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 10),
-            OutlinedButton.icon(
-              onPressed: () { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Scanner opening..."))); }, 
-              icon: const Icon(Icons.camera_alt), 
-              label: const Text("SCAN BARCODE"),
-            ),
             const Divider(),
             CustomTextField(controller: nameController, label: "Medicine Name", icon: Icons.medication),
             CustomTextField(controller: genericController, label: "Generic Name", icon: Icons.science),
@@ -383,7 +354,7 @@ class _PharmacyHomeState extends State<PharmacyHome> {
               children: [
                 Expanded(child: CustomTextField(controller: priceController, label: "Price", icon: Icons.attach_money)),
                 const SizedBox(width: 10),
-                Expanded(child: CustomTextField(controller: stockController, label: "Initial Stock", icon: Icons.inventory)),
+                Expanded(child: CustomTextField(controller: stockController, label: "Stock", icon: Icons.inventory)),
               ],
             ),
             const SizedBox(height: 20),
@@ -403,13 +374,7 @@ class _PharmacyHomeState extends State<PharmacyHome> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Expanded(child: Text("$currentPharmacyName Info", overflow: TextOverflow.ellipsis)),
-            IconButton(
-              icon: const Icon(Icons.edit, color: Colors.blueAccent),
-              onPressed: () {
-                Navigator.pop(context);
-                _showEditProfileSheet(); 
-              },
-            ),
+            IconButton(icon: const Icon(Icons.edit, color: Colors.blueAccent), onPressed: () { Navigator.pop(context); _showEditProfileSheet(); }),
           ],
         ),
         content: Column(
@@ -420,50 +385,25 @@ class _PharmacyHomeState extends State<PharmacyHome> {
             const SizedBox(height: 5),
             Text("📞 Contact: $pPhone"),
             const SizedBox(height: 5),
-            Row(
-              children: [
-                const Icon(Icons.star, color: Colors.orange, size: 20),
-                Text(pRating == 0.0 ? " No Rating yet" : " $pRating (Real User Rating)"),
-              ],
-            ),
-            const Divider(),
-            const Text("Tip:", style: TextStyle(fontSize: 12, color: Colors.grey)),
-            const Text("Click the edit icon above to update your info."),
+            Row(children: [const Icon(Icons.star, color: Colors.orange, size: 20), Text(pRating == 0.0 ? " No Rating" : " $pRating")]),
           ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("CLOSE")),
-        ],
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text("CLOSE"))],
       ),
     );
   }
 
   Widget _buildHeader() {
-    String cityHead = pAddress.contains(',') ? pAddress.split(',')[0] : "Loading...";
+    String cityHead = pAddress.contains(',') ? pAddress.split(',')[0] : "Location";
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: const BoxDecoration(
-        color: Colors.blueAccent,
-        borderRadius: BorderRadius.only(bottomLeft: Radius.circular(20), bottomRight: Radius.circular(20)),
-      ),
+      decoration: const BoxDecoration(color: Colors.blueAccent, borderRadius: BorderRadius.only(bottomLeft: Radius.circular(20), bottomRight: Radius.circular(20))),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          // Dynamic Rating Logic
-          Column(children: [
-            const Icon(Icons.star, color: Colors.white), 
-            Text(pRating == 0.0 ? "No Rating" : "Rating: $pRating", style: const TextStyle(color: Colors.white))
-          ]),
-          
-          Column(children: [
-            const Icon(Icons.location_on, color: Colors.white), 
-            Text(cityHead, style: const TextStyle(color: Colors.white))
-          ]),
-          
-          const Column(children: [
-            Icon(Icons.access_time, color: Colors.white), 
-            Text("24/7 Open", style: TextStyle(color: Colors.white)) // Swapped Verified with Shop Status
-          ]),
+          Column(children: [const Icon(Icons.star, color: Colors.white), Text(pRating == 0.0 ? "No Rating" : "$pRating", style: const TextStyle(color: Colors.white))]),
+          Column(children: [const Icon(Icons.location_on, color: Colors.white), Text(cityHead, style: const TextStyle(color: Colors.white))]),
+          const Column(children: [Icon(Icons.access_time, color: Colors.white), Text("24/7 Open", style: TextStyle(color: Colors.white))]),
         ],
       ),
     );
