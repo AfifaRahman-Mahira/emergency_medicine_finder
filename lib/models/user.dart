@@ -3,16 +3,15 @@ class User {
   final String email;
   final String password;
   final String role;
-  final String? pharmacyName; // এটি আপনার এরর ফিক্স করবে
+  final String? pharmacyName; 
 
   User({
     required this.name,
     required this.email,
     required this.password,
     required this.role,
-    this.pharmacyName, // কনস্ট্রাক্টরে এটি যোগ করা হয়েছে
+    this.pharmacyName,
   });
-
   Map<String, dynamic> toMap() {
     return {
       'name': name,
