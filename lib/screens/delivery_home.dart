@@ -47,7 +47,7 @@ class _DeliveryHomeState extends State<DeliveryHome> {
           ),
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              // Logic: Show orders that are ready (Accepted) or currently being handled by THIS rider
+              // Logic: Pharmacy Accept korle Rider dekhte pabe
               stream: FirebaseFirestore.instance
                   .collection('orders')
                   .where('status', whereIn: ['Accepted', 'On the Way']).snapshots(),
@@ -59,18 +59,24 @@ class _DeliveryHomeState extends State<DeliveryHome> {
                   return _buildEmptyState();
                 }
 
+                // Filter logic: On the Way thakle sudu oi Rider dekhbe jini pick korechen
+                var availableTasks = snapshot.data!.docs.where((doc) {
+                  var d = doc.data() as Map<String, dynamic>;
+                  if (d['status'] == 'On the Way') {
+                    return d['riderId'] == uid;
+                  }
+                  return true; 
+                }).toList();
+
+                if (availableTasks.isEmpty) return _buildEmptyState();
+
                 return ListView.builder(
                   padding: const EdgeInsets.only(bottom: 20),
-                  itemCount: snapshot.data!.docs.length,
+                  itemCount: availableTasks.length,
                   itemBuilder: (context, index) {
-                    var doc = snapshot.data!.docs[index];
+                    var doc = availableTasks[index];
                     var data = doc.data() as Map<String, dynamic>;
                     String status = data['status'] ?? "Accepted";
-
-                    // Prevent riders from seeing "On the Way" orders taken by OTHER riders
-                    if (status == "On the Way" && data['riderId'] != uid) {
-                      return const SizedBox.shrink();
-                    }
 
                     return Card(
                       margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
@@ -79,8 +85,8 @@ class _DeliveryHomeState extends State<DeliveryHome> {
                       child: ExpansionTile(
                         leading: CircleAvatar(
                           backgroundColor: status == "On the Way"
-                              ? Colors.blue.withOpacity(0.2)
-                              : Colors.orange.withOpacity(0.2),
+                              ? Colors.blue.withValues(alpha: 0.2)
+                              : Colors.orange.withValues(alpha: 0.2),
                           child: Icon(
                             status == "On the Way" ? Icons.delivery_dining : Icons.store,
                             color: status == "On the Way" ? Colors.blue : Colors.orange.shade700,
@@ -103,8 +109,6 @@ class _DeliveryHomeState extends State<DeliveryHome> {
       ),
     );
   }
-
-  // --- UI Components ---
 
   Widget _buildEmptyState() {
     return const Center(
@@ -216,8 +220,6 @@ class _DeliveryHomeState extends State<DeliveryHome> {
     );
   }
 
-  // --- Logic Helpers ---
-
   void _updateStatus(String orderId, String currentStatus) async {
     String nextStatus = currentStatus == "Accepted" ? "On the Way" : "Delivered";
     
@@ -264,7 +266,7 @@ class _DeliveryHomeState extends State<DeliveryHome> {
           TextButton(
             onPressed: () async {
               await FirebaseAuth.instance.signOut();
-              if (mounted) Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => LoginScreen()));
+              if (mounted) Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => LoginScreen()), (r) => false);
             },
             child: const Text("LOGOUT", style: TextStyle(color: Colors.red)),
           ),
