@@ -54,7 +54,7 @@ class _DeliveryHomeState extends State<DeliveryHome> {
           TextButton(onPressed: () => Navigator.pop(context), child: const Text("CANCEL")),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFE65100), // Deep Orange
+              backgroundColor: const Color(0xFFE65100), 
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))
             ),
             onPressed: () async {
@@ -143,7 +143,7 @@ class _DeliveryHomeState extends State<DeliveryHome> {
           : StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('orders')
-                  .where('status', whereIn: ['Accepted', 'On the Way'])
+                  .where('status', whereIn: ['ready_for_pickup', 'shipped'])
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -157,7 +157,7 @@ class _DeliveryHomeState extends State<DeliveryHome> {
                   var d = doc.data() as Map<String, dynamic>;
                   bool cityMatches = d['city']?.toString().toLowerCase() == riderCity.toLowerCase();
                   if (!cityMatches) return false;
-                  if (d['status'] == 'On the Way') return d['riderId'] == uid;
+                  if (d['status'] == 'shipped') return d['riderId'] == uid;
                   return true; 
                 }).toList();
 
@@ -169,8 +169,7 @@ class _DeliveryHomeState extends State<DeliveryHome> {
                   itemBuilder: (context, index) {
                     var doc = availableTasks[index];
                     var data = doc.data() as Map<String, dynamic>;
-                    String status = data['status'] ?? "Accepted";
-                    return _buildOrderCard(doc.id, data, status);
+                    return _buildOrderCard(doc.id, data);
                   },
                 );
               },
@@ -242,7 +241,9 @@ class _DeliveryHomeState extends State<DeliveryHome> {
     );
   }
 
-  Widget _buildOrderCard(String id, Map<String, dynamic> data, String status) {
+  Widget _buildOrderCard(String id, Map<String, dynamic> data) {
+    String status = data['status'] ?? "ready_for_pickup";
+    
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 2,
@@ -250,9 +251,9 @@ class _DeliveryHomeState extends State<DeliveryHome> {
       child: ExpansionTile(
         iconColor: const Color(0xFFE65100),
         leading: CircleAvatar(
-          backgroundColor: status == "On the Way" ? Colors.blue.shade50 : const Color(0xFFFFF3E0),
-          child: Icon(status == "On the Way" ? Icons.delivery_dining : Icons.storefront_rounded, 
-                     color: status == "On the Way" ? Colors.blue : const Color(0xFFE65100)),
+          backgroundColor: status == "shipped" ? Colors.blue.shade50 : const Color(0xFFFFF3E0),
+          child: Icon(status == "shipped" ? Icons.delivery_dining : Icons.storefront_rounded, 
+                     color: status == "shipped" ? Colors.blue : const Color(0xFFE65100)),
         ),
         title: Text(data['medicineName'] ?? "Order", style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2E3E5C))),
         subtitle: Text("Pharmacy: ${data['pharmacyName']}", style: const TextStyle(fontSize: 12)),
@@ -283,12 +284,12 @@ class _DeliveryHomeState extends State<DeliveryHome> {
             width: double.infinity,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: status == "Accepted" ? const Color(0xFFE65100) : Colors.green.shade700,
+                backgroundColor: status == "ready_for_pickup" ? const Color(0xFFE65100) : Colors.green.shade700,
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
               ),
               onPressed: () => _updateStatus(orderId, status),
-              child: Text(status == "Accepted" ? "CONFIRM PICK UP" : "MARK AS DELIVERED", 
+              child: Text(status == "ready_for_pickup" ? "CONFIRM PICK UP" : "MARK AS DELIVERED", 
                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             ),
           ),
@@ -298,12 +299,21 @@ class _DeliveryHomeState extends State<DeliveryHome> {
   }
 
   void _updateStatus(String orderId, String currentStatus) async {
-    String nextStatus = currentStatus == "Accepted" ? "On the Way" : "Delivered";
+    String nextStatus = currentStatus == "ready_for_pickup" ? "shipped" : "Delivered";
+    
     await FirebaseFirestore.instance.collection('orders').doc(orderId).update({
       'status': nextStatus,
       'riderId': uid,
+      'riderName': FirebaseAuth.instance.currentUser?.displayName ?? "Rider",
       'timestamp': FieldValue.serverTimestamp(),
     });
+
+    if (mounted) {
+       ScaffoldMessenger.of(context).showSnackBar(
+         SnackBar(content: Text(nextStatus == "shipped" ? "Order Picked Up!" : "Order Delivered!"), 
+         backgroundColor: Colors.green)
+       );
+    }
   }
 
   Widget _buildEmptyState(String msg) => Center(child: Padding(padding: const EdgeInsets.all(40), child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [const Icon(Icons.delivery_dining_outlined, size: 60, color: Colors.grey), const SizedBox(height: 15), Text(msg, textAlign: TextAlign.center, style: const TextStyle(color: Colors.grey, fontSize: 13))])));
@@ -314,13 +324,15 @@ class _DeliveryHomeState extends State<DeliveryHome> {
 
   Future<void> _openMap(String? addr) async {
     if (addr == null) return;
-    final url = Uri.parse("https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(addr)}");
-    if (await canLaunchUrl(url)) await launchUrl(url);
+    final Uri url = Uri.parse("https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(addr)}");
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    }
   }
 
   Future<void> _makeCall(String? p) async {
     if (p == null) return;
-    final url = Uri.parse("tel:$p");
+    final Uri url = Uri.parse("tel:$p");
     if (await canLaunchUrl(url)) await launchUrl(url);
   }
 
@@ -334,7 +346,7 @@ class _DeliveryHomeState extends State<DeliveryHome> {
         TextButton(onPressed: () async {
           await FirebaseAuth.instance.signOut();
           if (mounted) {
-            // FIXED: Removed 'const' from LoginScreen() to resolve the compilation error
+            // FIXED: Removed 'const' keyword to avoid constructor error
             Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => LoginScreen()), (r) => false);
           }
         }, child: const Text("Yes", style: TextStyle(color: Colors.red))),
