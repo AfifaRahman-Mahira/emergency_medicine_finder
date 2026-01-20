@@ -22,7 +22,6 @@ class _DeliveryHomeState extends State<DeliveryHome> {
     _fetchRiderData();
   }
 
-  // Database theke Rider-er manually set kora city ebong rating fetch kora
   void _fetchRiderData() async {
     try {
       var doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
@@ -37,13 +36,13 @@ class _DeliveryHomeState extends State<DeliveryHome> {
     }
   }
 
-  // Rider-er location manually change ba set korar popup logic
   void _showLocationDialog() {
     TextEditingController cityController = TextEditingController(text: riderCity);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Set Your Delivery City"),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text("Set Your Delivery City", style: TextStyle(fontWeight: FontWeight.bold)),
         content: TextField(
           controller: cityController,
           decoration: const InputDecoration(
@@ -54,7 +53,10 @@ class _DeliveryHomeState extends State<DeliveryHome> {
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text("CANCEL")),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange.shade700),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFE65100), // Deep Orange
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))
+            ),
             onPressed: () async {
               if (cityController.text.isNotEmpty) {
                 String newCity = cityController.text.trim();
@@ -77,17 +79,19 @@ class _DeliveryHomeState extends State<DeliveryHome> {
     return DefaultTabController(
       length: 2, 
       child: Scaffold(
-        backgroundColor: const Color(0xFFF4F7FF),
+        backgroundColor: const Color(0xFFF8F9FD),
         appBar: AppBar(
           title: const Text('Rider Dashboard',
-              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-          backgroundColor: Colors.orange.shade700,
+              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18)),
+          backgroundColor: const Color(0xFFE65100),
           elevation: 0,
           iconTheme: const IconThemeData(color: Colors.white),
           bottom: const TabBar(
             indicatorColor: Colors.white,
+            indicatorWeight: 3,
             labelColor: Colors.white,
             unselectedLabelColor: Colors.white70,
+            labelStyle: TextStyle(fontWeight: FontWeight.bold),
             tabs: [
               Tab(icon: Icon(Icons.directions_run), text: "Active Tasks"), 
               Tab(icon: Icon(Icons.history), text: "History"),
@@ -95,7 +99,7 @@ class _DeliveryHomeState extends State<DeliveryHome> {
           ),
           actions: [
             IconButton(
-              icon: const Icon(Icons.logout),
+              icon: const Icon(Icons.logout_rounded),
               onPressed: () => _showLogoutDialog(context),
             ),
           ],
@@ -108,15 +112,14 @@ class _DeliveryHomeState extends State<DeliveryHome> {
         ),
         floatingActionButton: FloatingActionButton.extended(
           onPressed: _showLocationDialog,
-          backgroundColor: Colors.orange.shade700,
+          backgroundColor: const Color(0xFFE65100),
           icon: const Icon(Icons.edit_location_alt, color: Colors.white),
-          label: const Text("Update Location", style: TextStyle(color: Colors.white)),
+          label: const Text("Update Location", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         ),
       ),
     );
   }
 
-  // --- TAB 1: ACTIVE TASKS ---
   Widget _buildActiveTasksTab() {
     return Column(
       children: [
@@ -125,11 +128,11 @@ class _DeliveryHomeState extends State<DeliveryHome> {
           padding: const EdgeInsets.fromLTRB(16, 20, 16, 10),
           child: Row(
             children: [
-              Icon(Icons.location_on, color: Colors.orange.shade700),
+              const Icon(Icons.location_on, color: Color(0xFFE65100), size: 20),
               const SizedBox(width: 8),
               Text(
                 riderCity.isEmpty ? "No location set" : "Tasks in $riderCity",
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF2E3E5C)),
               ),
             ],
           ),
@@ -138,46 +141,45 @@ class _DeliveryHomeState extends State<DeliveryHome> {
           child: riderCity.isEmpty 
           ? _buildEmptyState("Please click 'Update Location' to start receiving tasks.")
           : StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection('orders')
-                .where('status', whereIn: ['Accepted', 'On the Way'])
-                .snapshots(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                return _buildEmptyState("No active tasks found.");
-              }
+              stream: FirebaseFirestore.instance
+                  .collection('orders')
+                  .where('status', whereIn: ['Accepted', 'On the Way'])
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return _buildEmptyState("No active tasks found.");
+                }
 
-              var availableTasks = snapshot.data!.docs.where((doc) {
-                var d = doc.data() as Map<String, dynamic>;
-                bool cityMatches = d['city']?.toString().toLowerCase() == riderCity.toLowerCase();
-                if (!cityMatches) return false;
-                if (d['status'] == 'On the Way') return d['riderId'] == uid;
-                return true; 
-              }).toList();
+                var availableTasks = snapshot.data!.docs.where((doc) {
+                  var d = doc.data() as Map<String, dynamic>;
+                  bool cityMatches = d['city']?.toString().toLowerCase() == riderCity.toLowerCase();
+                  if (!cityMatches) return false;
+                  if (d['status'] == 'On the Way') return d['riderId'] == uid;
+                  return true; 
+                }).toList();
 
-              if (availableTasks.isEmpty) return _buildEmptyState("No tasks in $riderCity right now.");
+                if (availableTasks.isEmpty) return _buildEmptyState("No tasks in $riderCity right now.");
 
-              return ListView.builder(
-                padding: const EdgeInsets.only(bottom: 80),
-                itemCount: availableTasks.length,
-                itemBuilder: (context, index) {
-                  var doc = availableTasks[index];
-                  var data = doc.data() as Map<String, dynamic>;
-                  String status = data['status'] ?? "Accepted";
-                  return _buildOrderCard(doc.id, data, status);
-                },
-              );
-            },
-          ),
+                return ListView.builder(
+                  padding: const EdgeInsets.only(bottom: 80, left: 10, right: 10),
+                  itemCount: availableTasks.length,
+                  itemBuilder: (context, index) {
+                    var doc = availableTasks[index];
+                    var data = doc.data() as Map<String, dynamic>;
+                    String status = data['status'] ?? "Accepted";
+                    return _buildOrderCard(doc.id, data, status);
+                  },
+                );
+              },
+            ),
         ),
       ],
     );
   }
 
-  // --- TAB 2: HISTORY ---
   Widget _buildHistoryTab() {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
@@ -190,14 +192,19 @@ class _DeliveryHomeState extends State<DeliveryHome> {
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) return _buildEmptyState("No delivery history yet.");
 
         return ListView.builder(
+          padding: const EdgeInsets.all(10),
           itemCount: snapshot.data!.docs.length,
           itemBuilder: (context, index) {
             var data = snapshot.data!.docs[index].data() as Map<String, dynamic>;
-            return ListTile(
-              leading: const CircleAvatar(backgroundColor: Colors.green, child: Icon(Icons.check, color: Colors.white)),
-              title: Text(data['medicineName'] ?? "Medicine"),
-              subtitle: Text("To: ${data['patientName']}"),
-              trailing: Text("৳${data['price']}", style: const TextStyle(fontWeight: FontWeight.bold)),
+            return Card(
+              elevation: 0.5,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+              child: ListTile(
+                leading: const CircleAvatar(backgroundColor: Color(0xFFE8F5E9), child: Icon(Icons.check_circle, color: Colors.green)),
+                title: Text(data['medicineName'] ?? "Medicine", style: const TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Text("To: ${data['patientName']}"),
+                trailing: Text("BDT ${data['price']}", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+              ),
             );
           },
         );
@@ -208,9 +215,9 @@ class _DeliveryHomeState extends State<DeliveryHome> {
   Widget _buildStatusHeader() {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 25, horizontal: 20),
-      decoration: BoxDecoration(
-        color: Colors.orange.shade700,
-        borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(30), bottomRight: Radius.circular(30)),
+      decoration: const BoxDecoration(
+        color: Color(0xFFE65100),
+        borderRadius: BorderRadius.only(bottomLeft: Radius.circular(30), bottomRight: Radius.circular(30)),
       ),
       child: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
@@ -223,7 +230,7 @@ class _DeliveryHomeState extends State<DeliveryHome> {
           return Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _headerStat("Earnings", "৳${completed * 50}"),
+              _headerStat("Earnings", "BDT ${completed * 50}"),
               _divider(),
               _headerStat("Completed", "$completed"),
               _divider(),
@@ -237,16 +244,18 @@ class _DeliveryHomeState extends State<DeliveryHome> {
 
   Widget _buildOrderCard(String id, Map<String, dynamic> data, String status) {
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
-      elevation: 4,
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       child: ExpansionTile(
+        iconColor: const Color(0xFFE65100),
         leading: CircleAvatar(
-          backgroundColor: status == "On the Way" ? Colors.blue.shade100 : Colors.orange.shade100,
-          child: Icon(status == "On the Way" ? Icons.delivery_dining : Icons.store, color: status == "On the Way" ? Colors.blue : Colors.orange.shade700),
+          backgroundColor: status == "On the Way" ? Colors.blue.shade50 : const Color(0xFFFFF3E0),
+          child: Icon(status == "On the Way" ? Icons.delivery_dining : Icons.storefront_rounded, 
+                     color: status == "On the Way" ? Colors.blue : const Color(0xFFE65100)),
         ),
-        title: Text(data['medicineName'] ?? "Order", style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text("Pharmacy: ${data['pharmacyName']}"),
+        title: Text(data['medicineName'] ?? "Order", style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2E3E5C))),
+        subtitle: Text("Pharmacy: ${data['pharmacyName']}", style: const TextStyle(fontSize: 12)),
         children: [_buildOrderDetails(id, data, status)],
       ),
     );
@@ -258,24 +267,29 @@ class _DeliveryHomeState extends State<DeliveryHome> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildInfoRow(Icons.person, "Patient: ${data['patientName']}"),
-          _buildInfoRow(Icons.location_on, "Drop-off: ${data['patientAddress']}"),
-          _buildInfoRow(Icons.payments, "Collect: ৳${data['price']}"),
-          const Divider(),
+          _buildInfoRow(Icons.person_outline, "Patient: ${data['patientName']}"),
+          _buildInfoRow(Icons.location_on_outlined, "Drop-off: ${data['patientAddress']}"),
+          _buildInfoRow(Icons.payments_outlined, "Collect Cash: BDT ${data['price']}"),
+          const Divider(height: 25),
           Row(
             children: [
-              _actionBtn(Icons.call, "CALL", Colors.blueGrey, () => _makeCall(data['patientPhone'])),
+              _actionBtn(Icons.call_rounded, "CALL", Colors.blueGrey.shade700, () => _makeCall(data['patientPhone'])),
               const SizedBox(width: 10),
-              _actionBtn(Icons.navigation, "MAPS", Colors.green, () => _openMap(data['patientAddress'])),
+              _actionBtn(Icons.near_me_rounded, "MAPS", Colors.green.shade700, () => _openMap(data['patientAddress'])),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 15),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: status == "Accepted" ? Colors.orange.shade700 : Colors.green),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: status == "Accepted" ? const Color(0xFFE65100) : Colors.green.shade700,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
+              ),
               onPressed: () => _updateStatus(orderId, status),
-              child: Text(status == "Accepted" ? "CONFIRM PICK UP" : "MARK AS DELIVERED", style: const TextStyle(color: Colors.white)),
+              child: Text(status == "Accepted" ? "CONFIRM PICK UP" : "MARK AS DELIVERED", 
+                         style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             ),
           ),
         ],
@@ -292,11 +306,11 @@ class _DeliveryHomeState extends State<DeliveryHome> {
     });
   }
 
-  Widget _buildEmptyState(String msg) => Center(child: Padding(padding: const EdgeInsets.all(20), child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [const Icon(Icons.location_off, size: 50, color: Colors.grey), const SizedBox(height: 10), Text(msg, textAlign: TextAlign.center, style: const TextStyle(color: Colors.grey))])));
-  Widget _buildInfoRow(IconData i, String t) => Padding(padding: const EdgeInsets.only(bottom: 8), child: Row(children: [Icon(i, size: 16, color: Colors.grey), const SizedBox(width: 8), Text(t)]));
-  Widget _headerStat(String l, String v) => Column(children: [Text(l, style: const TextStyle(color: Colors.white70)), Text(v, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold))]);
+  Widget _buildEmptyState(String msg) => Center(child: Padding(padding: const EdgeInsets.all(40), child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [const Icon(Icons.delivery_dining_outlined, size: 60, color: Colors.grey), const SizedBox(height: 15), Text(msg, textAlign: TextAlign.center, style: const TextStyle(color: Colors.grey, fontSize: 13))])));
+  Widget _buildInfoRow(IconData i, String t) => Padding(padding: const EdgeInsets.only(bottom: 10), child: Row(children: [Icon(i, size: 18, color: Colors.blueGrey), const SizedBox(width: 10), Expanded(child: Text(t, style: const TextStyle(fontSize: 13, color: Colors.black87)))]));
+  Widget _headerStat(String l, String v) => Column(children: [Text(l, style: const TextStyle(color: Colors.white70, fontSize: 12)), const SizedBox(height: 4), Text(v, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold))]);
   Widget _divider() => Container(width: 1, height: 30, color: Colors.white24);
-  Widget _actionBtn(IconData i, String l, Color c, VoidCallback o) => Expanded(child: ElevatedButton.icon(style: ElevatedButton.styleFrom(backgroundColor: c), onPressed: o, icon: Icon(i, size: 16, color: Colors.white), label: Text(l, style: const TextStyle(color: Colors.white, fontSize: 12))));
+  Widget _actionBtn(IconData i, String l, Color c, VoidCallback o) => Expanded(child: ElevatedButton.icon(style: ElevatedButton.styleFrom(backgroundColor: c, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))), onPressed: o, icon: Icon(i, size: 18, color: Colors.white), label: Text(l, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold))));
 
   Future<void> _openMap(String? addr) async {
     if (addr == null) return;
@@ -312,16 +326,18 @@ class _DeliveryHomeState extends State<DeliveryHome> {
 
   void _showLogoutDialog(BuildContext context) {
     showDialog(context: context, builder: (context) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       title: const Text("Logout?"),
+      content: const Text("Are you sure you want to logout?"),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: const Text("No")),
         TextButton(onPressed: () async {
           await FirebaseAuth.instance.signOut();
           if (mounted) {
-            // FIXED: const keyword removed here
+            // FIXED: Removed 'const' from LoginScreen() to resolve the compilation error
             Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => LoginScreen()), (r) => false);
           }
-        }, child: const Text("Yes")),
+        }, child: const Text("Yes", style: TextStyle(color: Colors.red))),
       ],
     ));
   }

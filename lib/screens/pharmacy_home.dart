@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; 
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:url_launcher/url_launcher.dart'; 
 import 'package:mobile_scanner/mobile_scanner.dart'; 
 import 'login_screen.dart';
 
@@ -16,7 +17,7 @@ class _PharmacyHomeState extends State<PharmacyHome> with SingleTickerProviderSt
   late TabController _tabController;
   final String uid = FirebaseAuth.instance.currentUser?.uid ?? "";
 
-  // Inventory Controllers
+  // Inventory & Profile Controllers
   final nameController = TextEditingController();
   final priceController = TextEditingController();
   final stockController = TextEditingController();
@@ -24,416 +25,439 @@ class _PharmacyHomeState extends State<PharmacyHome> with SingleTickerProviderSt
   final barcodeController = TextEditingController();
   final searchController = TextEditingController();
   
-  // Profile Controllers
-  final editNameController = TextEditingController(); 
-  final editPhoneController = TextEditingController();
-  final editAddressController = TextEditingController(); 
+  final shopNameController = TextEditingController();
+  final phoneController = TextEditingController();
+  final addressController = TextEditingController();
+  final cityController = TextEditingController();
 
   String searchQuery = "";
-  String pCity = "Dhaka"; 
   String currentPharmacyName = "";
-  String pharmacyPhone = "";
+  String pCity = ""; 
+  String pPhone = "";
+  String pAddress = "";
+  double averageRating = 4.7; 
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this); 
     currentPharmacyName = widget.pharmacyName;
-    _listenToPharmacyProfile();
+    _fetchPharmacyDetails();
   }
 
-  // Real-time listener for pharmacy profile changes
-  void _listenToPharmacyProfile() {
+  void _fetchPharmacyDetails() async {
     if (uid.isEmpty) return;
-    FirebaseFirestore.instance.collection('users').doc(uid).snapshots().listen((snapshot) {
-      if (snapshot.exists && mounted) {
+    FirebaseFirestore.instance.collection('users').doc(uid).snapshots().listen((doc) {
+      if (doc.exists && mounted) {
         setState(() {
-          currentPharmacyName = snapshot.data()?['name'] ?? snapshot.data()?['pharmacyName'] ?? widget.pharmacyName;
-          pCity = snapshot.data()?['city'] ?? "Dhaka";
-          pharmacyPhone = snapshot.data()?['phone'] ?? "";
-          editNameController.text = currentPharmacyName;
-          editPhoneController.text = pharmacyPhone;
-          editAddressController.text = snapshot.data()?['address'] ?? "";
+          currentPharmacyName = doc.data()?['name'] ?? widget.pharmacyName;
+          pCity = doc.data()?['city'] ?? "Update City";
+          pPhone = doc.data()?['phone'] ?? "Update Phone";
+          pAddress = doc.data()?['address'] ?? "Update Address";
+          
+          shopNameController.text = currentPharmacyName;
+          phoneController.text = pPhone;
+          addressController.text = pAddress;
+          cityController.text = pCity;
         });
       }
     });
   }
 
+  // --- SCANNER SYSTEM ---
+  void _openScanner({required bool isAddingNew}) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.black,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(25))),
+      builder: (context) => SizedBox(
+        height: MediaQuery.of(context).size.height * 0.8,
+        child: Column(
+          children: [
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 20),
+              child: Text("Scan Medicine Barcode", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+            ),
+            Expanded(
+              child: MobileScanner(
+                onDetect: (capture) {
+                  final List<Barcode> barcodes = capture.barcodes;
+                  if (barcodes.isNotEmpty) {
+                    final String code = barcodes.first.rawValue ?? "";
+                    Navigator.pop(context);
+                    setState(() {
+                      if (isAddingNew) {
+                        barcodeController.text = code;
+                      } else {
+                        searchController.text = code;
+                        searchQuery = code;
+                      }
+                    });
+                  }
+                },
+              ),
+            ),
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text("CANCEL", style: TextStyle(color: Colors.red, fontSize: 16))),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F2F8),
+      backgroundColor: const Color(0xFFF8FAFF),
       appBar: AppBar(
-        title: Text(currentPharmacyName, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-        backgroundColor: const Color(0xFF0D47A1),
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
+        backgroundColor: const Color(0xFF1A237E),
+        elevation: 4,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(currentPharmacyName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+            Text("Rating: ⭐ $averageRating", style: const TextStyle(color: Colors.white70, fontSize: 11)),
+          ],
+        ),
         actions: [
-          IconButton(icon: const Icon(Icons.settings), onPressed: _showEditProfileSheet),
-          IconButton(icon: const Icon(Icons.logout), onPressed: _handleLogout),
+          IconButton(icon: const Icon(Icons.settings_outlined, color: Colors.white), onPressed: _showSettingsSheet),
+          IconButton(icon: const Icon(Icons.logout_rounded, color: Colors.white), onPressed: _handleLogout),
         ],
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: Colors.orangeAccent,
+          indicatorColor: Colors.amberAccent,
+          indicatorWeight: 3,
           labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          tabs: const [Tab(text: "INVENTORY"), Tab(text: "LIVE ORDERS")],
+          unselectedLabelColor: Colors.white60,
+          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+          tabs: const [Tab(text: "INVENTORY"), Tab(text: "LIVE ORDERS"), Tab(text: "HISTORY")],
         ),
       ),
       body: TabBarView(
         controller: _tabController,
-        children: [_buildInventoryTab(), _buildOrdersTab()],
+        children: [
+          _buildInventoryTab(),
+          _buildOrdersTab(isHistory: false),
+          _buildOrdersTab(isHistory: true),
+        ],
       ),
     );
   }
 
   // --- 1. INVENTORY TAB ---
   Widget _buildInventoryTab() {
-    return Stack(
+    return Column(
       children: [
-        Column(
-          children: [
-            _buildStatsBar(),
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: TextField(
-                controller: searchController,
-                onChanged: (v) => setState(() => searchQuery = v.toLowerCase()),
-                style: const TextStyle(color: Colors.black),
-                decoration: InputDecoration(
-                  hintText: "Search stock...",
-                  prefixIcon: const Icon(Icons.search, color: Color(0xFF0D47A1)),
-                  filled: true, fillColor: Colors.white,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                ),
-              ),
-            ),
-            Expanded(
-              child: StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance.collection('medicines')
-                    .where('ownerId', isEqualTo: uid)
-                    .snapshots(),
-                builder: (context, snapshot) {
-                  if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-                  
-                  var meds = snapshot.data!.docs.where((doc) {
-                    var data = doc.data() as Map<String, dynamic>;
-                    return data['name'].toString().toLowerCase().contains(searchQuery);
-                  }).toList();
+        _buildStatsBar(),
+        _buildSearchBar(),
+        Expanded(
+          child: StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance.collection('medicines').where('ownerId', isEqualTo: uid).snapshots(),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+              var docs = snapshot.data!.docs.where((d) {
+                String name = d['name'].toString().toLowerCase();
+                String barcode = d['barcode']?.toString() ?? "";
+                return name.contains(searchQuery.toLowerCase()) || barcode.contains(searchQuery);
+              }).toList();
 
-                  if (meds.isEmpty) return const Center(child: Text("No items in stock", style: TextStyle(color: Colors.black54)));
+              if (docs.isEmpty) return _emptyState("No medicines found in stock.");
 
-                  return ListView.builder(
-                    padding: const EdgeInsets.only(bottom: 100),
-                    itemCount: meds.length,
-                    itemBuilder: (context, index) {
-                      var data = meds[index].data() as Map<String, dynamic>;
-                      return _buildMedicineCard(meds[index].id, data);
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
+              return ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                itemCount: docs.length,
+                itemBuilder: (context, index) => _medicineTile(docs[index].id, docs[index].data() as Map<String, dynamic>),
+              );
+            },
+          ),
         ),
-        _buildBottomActions(),
+        _buildAddButton(),
       ],
     );
   }
 
-  // --- 2. LIVE ORDERS TAB (FIXED QUERY) ---
-  Widget _buildOrdersTab() {
+  Widget _buildStatsBar() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      color: Colors.white,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _statBox(Icons.location_on, pCity, Colors.blue),
+          _statBox(Icons.phone, pPhone, Colors.green),
+          _statBox(Icons.star, "Top Rated", Colors.orange),
+        ],
+      ),
+    );
+  }
+
+  Widget _statBox(IconData icon, String label, Color color) {
+    return Row(children: [Icon(icon, size: 14, color: color), const SizedBox(width: 4), Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600))]);
+  }
+
+  Widget _buildSearchBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 15, 14, 10),
+      child: TextField(
+        controller: searchController,
+        onChanged: (v) => setState(() => searchQuery = v),
+        decoration: InputDecoration(
+          hintText: "Search name or scan barcode...",
+          prefixIcon: const Icon(Icons.search, color: Color(0xFF1A237E)),
+          suffixIcon: IconButton(icon: const Icon(Icons.qr_code_scanner, color: Colors.orange), onPressed: () => _openScanner(isAddingNew: false)),
+          filled: true, 
+          fillColor: Colors.white,
+          contentPadding: const EdgeInsets.symmetric(vertical: 0),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide(color: Colors.grey.shade200)),
+        ),
+      ),
+    );
+  }
+
+  Widget _medicineTile(String id, Map<String, dynamic> data) {
+    int stock = int.tryParse(data['stock'].toString()) ?? 0;
+    return Card(
+      elevation: 0.5, 
+      margin: const EdgeInsets.only(bottom: 10),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15), side: BorderSide(color: Colors.grey.shade100)),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        title: Text(data['name'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF1A237E))),
+        subtitle: Text("${data['generic']}\nPrice: BDT ${data['price']}", style: const TextStyle(fontSize: 13)),
+        trailing: SizedBox(
+          width: 50, // Fixed width to prevent overflow
+          child: Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: stock < 10 ? Colors.red.shade50 : Colors.green.shade50, 
+              borderRadius: BorderRadius.circular(10)
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                FittedBox( // Prevents text from overflowing vertically or horizontally
+                  child: Text("$stock", style: TextStyle(fontWeight: FontWeight.bold, color: stock < 10 ? Colors.red : Colors.green.shade700)),
+                ),
+                const Text("Qty", style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold)),
+              ],
+            ),
+          ),
+        ),
+        onLongPress: () => _deleteMedicine(id),
+      ),
+    );
+  }
+
+  // --- 2. ORDER TABS ---
+  Widget _buildOrdersTab({required bool isHistory}) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance.collection('orders')
           .where('pharmacyId', isEqualTo: uid)
-          .snapshots(), // Removed orderBy temporarily to fix "Order not showing" issue
+          .where('status', isEqualTo: isHistory ? "Delivered" : "Pending")
+          .snapshots(),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) return const Center(child: Text("No incoming orders.", style: TextStyle(color: Colors.black54)));
+        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+        if (snapshot.data!.docs.isEmpty) return _emptyState(isHistory ? "No order history found." : "No pending orders today.");
 
         return ListView.builder(
+          padding: const EdgeInsets.all(14),
           itemCount: snapshot.data!.docs.length,
           itemBuilder: (context, index) {
             var doc = snapshot.data!.docs[index];
             var data = doc.data() as Map<String, dynamic>;
-            String status = data['status'] ?? "Pending";
-            
-            return Card(
-              color: Colors.white,
-              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              child: ExpansionTile(
-                leading: CircleAvatar(
-                  backgroundColor: _getStatusColor(status).withValues(alpha: 0.1),
-                  child: Icon(_getStatusIcon(status), color: _getStatusColor(status)),
-                ),
-                title: Text(data['medicineName'] ?? "Medicine", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black)),
-                subtitle: Text("Patient: ${data['patientName']}", style: const TextStyle(color: Colors.black54)),
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _orderDetailRow(Icons.location_on, "Address: ${data['patientAddress']}"),
-                        _orderDetailRow(Icons.phone, "Phone: ${data['patientPhone']}"),
-                        _orderDetailRow(Icons.payments, "Bill Amount: ৳${data['price']}"),
-                        const Divider(),
-                        const Text("Change Status:", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                        const SizedBox(height: 10),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            _statusBtn(doc.id, "Accepted", Colors.blue, data),
-                            _statusBtn(doc.id, "On the Way", Colors.orange, data),
-                            _statusBtn(doc.id, "Delivered", Colors.green, data),
-                          ],
-                        ),
-                      ],
-                    ),
-                  )
-                ],
-              ),
-            );
+            return _orderCard(doc.id, data, isHistory);
           },
         );
       },
     );
   }
 
-  Widget _statusBtn(String docId, String status, Color color, Map<String, dynamic> orderData) {
-    return ElevatedButton(
-      style: ElevatedButton.styleFrom(backgroundColor: color, padding: const EdgeInsets.symmetric(horizontal: 8)),
-      onPressed: () async {
-        if (status == "Delivered") {
-          _deductStock(orderData['medicineName']);
-        }
-        await FirebaseFirestore.instance.collection('orders').doc(docId).update({'status': status});
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Order marked as $status")));
-      },
-      child: Text(status, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-    );
-  }
-
-  void _deductStock(String? medName) async {
-    if (medName == null) return;
-    var query = await FirebaseFirestore.instance.collection('medicines')
-        .where('ownerId', isEqualTo: uid)
-        .where('name', isEqualTo: medName)
-        .limit(1)
-        .get();
-    
-    if (query.docs.isNotEmpty) {
-      int currentStock = int.tryParse(query.docs.first['stock'].toString()) ?? 0;
-      if (currentStock > 0) {
-        query.docs.first.reference.update({'stock': currentStock - 1});
-      }
-    }
-  }
-
-  Widget _orderDetailRow(IconData icon, String text) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 4),
-    child: Row(children: [Icon(icon, size: 16, color: const Color(0xFF0D47A1)), const SizedBox(width: 8), Expanded(child: Text(text, style: const TextStyle(fontSize: 13, color: Colors.black87)))]),
-  );
-
-  Color _getStatusColor(String status) {
-    if (status == "Accepted") return Colors.blue;
-    if (status == "On the Way") return Colors.orange;
-    if (status == "Delivered") return Colors.green;
-    return Colors.redAccent;
-  }
-
-  IconData _getStatusIcon(String status) {
-    if (status == "Accepted") return Icons.check_circle;
-    if (status == "On the Way") return Icons.local_shipping;
-    if (status == "Delivered") return Icons.verified;
-    return Icons.hourglass_top;
-  }
-
-  Widget _buildMedicineCard(String docId, Map<String, dynamic> data) {
-    int stock = int.tryParse(data['stock'].toString()) ?? 0;
-    bool isLowStock = stock < 5;
-
+  Widget _orderCard(String id, Map<String, dynamic> data, bool isHistory) {
     return Card(
-      color: isLowStock ? Colors.red.shade50 : Colors.white,
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-        side: isLowStock ? BorderSide(color: Colors.red.shade200, width: 1) : BorderSide.none,
-      ),
-      child: ListTile(
-        onTap: () => _showQuickEdit(docId, data),
-        leading: isLowStock 
-          ? const Icon(Icons.warning_amber_rounded, color: Colors.red) 
-          : const Icon(Icons.medication, color: Color(0xFF0D47A1)),
-        title: Text(data['name'], style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: isLowStock 
-          ? const Text("LOW STOCK ALERT!", style: TextStyle(color: Colors.red, fontSize: 11, fontWeight: FontWeight.bold))
-          : Text("Generic: ${data['generic']}"),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text("৳${data['price']}", style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-            Text("Stock: $stock", style: TextStyle(color: isLowStock ? Colors.red : Colors.blue, fontWeight: FontWeight.bold)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatsBar() {
-    return Container(
-      padding: const EdgeInsets.all(15),
-      color: const Color(0xFF0D47A1),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+      elevation: 2,
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      child: ExpansionTile(
+        iconColor: const Color(0xFF1A237E),
+        title: Text(data['medicineName'], style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1A237E))),
+        subtitle: Text("Patient: ${data['patientName']}", style: const TextStyle(fontSize: 13)),
         children: [
-          _statItem(Icons.location_on, pCity),
-          _statItem(Icons.verified, "Verified"),
-          _statItem(Icons.inventory_2, "Stock Active"),
-        ],
-      ),
-    );
-  }
-
-  Widget _statItem(IconData icon, String label) => Column(children: [Icon(icon, color: Colors.white, size: 20), const SizedBox(height: 4), Text(label, style: const TextStyle(color: Colors.white, fontSize: 11))]);
-
-  Widget _buildBottomActions() {
-    return Positioned(
-      bottom: 20, left: 20, right: 20,
-      child: Row(
-        children: [
-          Expanded(child: ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange.shade800, padding: const EdgeInsets.all(15), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-            onPressed: _showAddSheet,
-            child: const Text("ADD NEW MEDICINE", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          )),
-          const SizedBox(width: 10),
-          FloatingActionButton(
-            backgroundColor: const Color(0xFF0D47A1),
-            onPressed: () => _openScanner(isAddingNew: true),
-            child: const Icon(Icons.qr_code_scanner, color: Colors.white),
+          Padding(
+            padding: const EdgeInsets.all(15),
+            child: Column(
+              children: [
+                _orderInfoRow(Icons.phone_in_talk_rounded, "Call: ${data['patientPhone']}", isLink: true, phone: data['patientPhone']),
+                _orderInfoRow(Icons.location_on_rounded, "Address: ${data['patientAddress']}"),
+                _orderInfoRow(Icons.receipt_long_rounded, "Total Bill: BDT ${data['price']} (Qty: ${data['quantity']})"),
+                const Divider(),
+                if (!isHistory)
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green.shade700, 
+                      minimumSize: const Size(double.infinity, 48),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
+                    ),
+                    onPressed: () => _deliverAndSyncStock(id, data),
+                    icon: const Icon(Icons.verified_rounded, color: Colors.white),
+                    label: const Text("MARK AS DELIVERED", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  )
+              ],
+            ),
           )
         ],
       ),
     );
   }
 
-  void _addMedicine() async {
-    if (nameController.text.isEmpty || priceController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Name and Price are required!")));
-      return;
-    }
-    await FirebaseFirestore.instance.collection('medicines').add({
-      'name': nameController.text.trim(),
-      'generic': genericController.text.trim(),
-      'price': priceController.text.trim(),
-      'stock': int.tryParse(stockController.text) ?? 0,
-      'barcode': barcodeController.text.trim(),
-      'ownerId': uid,
-      'pharmacyId': uid,
-      'pharmacyName': currentPharmacyName,
-      'city': pCity,
-      'phone': pharmacyPhone,
-      'timestamp': FieldValue.serverTimestamp(),
-    });
-    Navigator.pop(context);
-    nameController.clear(); priceController.clear(); stockController.clear(); genericController.clear(); barcodeController.clear();
-  }
-
-  void _showQuickEdit(String docId, Map<String, dynamic> data) {
-    final sEdit = TextEditingController(text: data['stock'].toString());
-    final pEdit = TextEditingController(text: data['price'].toString());
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text("Update ${data['name']}"),
-        content: Column(mainAxisSize: MainAxisSize.min, children: [
-          TextField(controller: sEdit, decoration: const InputDecoration(labelText: "Update Stock Quantity"), keyboardType: TextInputType.number),
-          TextField(controller: pEdit, decoration: const InputDecoration(labelText: "Update Price (৳)"), keyboardType: TextInputType.number),
-        ]),
-        actions: [
-          TextButton(onPressed: () {
-            FirebaseFirestore.instance.collection('medicines').doc(docId).delete();
-            Navigator.pop(context);
-          }, child: const Text("DELETE ITEM", style: TextStyle(color: Colors.red))),
-          ElevatedButton(onPressed: () {
-            FirebaseFirestore.instance.collection('medicines').doc(docId).update({
-              'stock': int.tryParse(sEdit.text) ?? 0, 
-              'price': pEdit.text
-            });
-            Navigator.pop(context);
-          }, child: const Text("SAVE CHANGES")),
-        ],
+  Widget _orderInfoRow(IconData icon, String text, {bool isLink = false, String? phone}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: InkWell(
+        onTap: isLink ? () => _makePhoneCall(phone!) : null,
+        child: Row(children: [Icon(icon, size: 16, color: Colors.blueGrey), const SizedBox(width: 10), Expanded(child: Text(text, style: TextStyle(color: isLink ? Colors.blue.shade800 : Colors.black87, fontWeight: isLink ? FontWeight.bold : FontWeight.normal, fontSize: 13)))]),
       ),
     );
   }
 
-  void _showEditProfileSheet() {
-    showModalBottomSheet(context: context, isScrollControlled: true, builder: (context) => Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 20, right: 20, top: 20),
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const Text("Pharmacy Settings", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-        const SizedBox(height: 15),
-        TextField(controller: editNameController, decoration: const InputDecoration(labelText: "Pharmacy Name", prefixIcon: Icon(Icons.store))),
-        TextField(controller: editPhoneController, decoration: const InputDecoration(labelText: "Public Contact Phone", prefixIcon: Icon(Icons.phone))),
-        TextField(controller: editAddressController, decoration: const InputDecoration(labelText: "Full Shop Address", prefixIcon: Icon(Icons.map))),
-        const SizedBox(height: 20),
-        SizedBox(width: double.infinity, child: ElevatedButton(
-          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0D47A1)),
-          onPressed: () {
-            FirebaseFirestore.instance.collection('users').doc(uid).update({
-              'name': editNameController.text,
-              'pharmacyName': editNameController.text,
-              'phone': editPhoneController.text,
-              'address': editAddressController.text
-            });
-            Navigator.pop(context);
-          },
-          child: const Text("UPDATE PROFILE", style: TextStyle(color: Colors.white)),
-        )),
-        const SizedBox(height: 20),
-      ]),
-    ));
-  }
-
-  void _showAddSheet() {
-    showModalBottomSheet(context: context, isScrollControlled: true, builder: (context) => Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 20, right: 20, top: 20),
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const Text("Inventory Entry", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-        TextField(controller: nameController, decoration: const InputDecoration(labelText: "Medicine Name", prefixIcon: Icon(Icons.medication))),
-        TextField(controller: genericController, decoration: const InputDecoration(labelText: "Generic Group", prefixIcon: Icon(Icons.science))),
-        TextField(controller: priceController, decoration: const InputDecoration(labelText: "Price", prefixIcon: Icon(Icons.payments)), keyboardType: TextInputType.number),
-        TextField(controller: stockController, decoration: const InputDecoration(labelText: "Stock Quantity", prefixIcon: Icon(Icons.inventory)), keyboardType: TextInputType.number),
-        TextField(controller: barcodeController, decoration: const InputDecoration(labelText: "Barcode (Optional)", prefixIcon: Icon(Icons.qr_code))),
-        const SizedBox(height: 20),
-        SizedBox(width: double.infinity, child: ElevatedButton(
-          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0D47A1)),
-          onPressed: _addMedicine,
-          child: const Text("ADD TO STOCK", style: TextStyle(color: Colors.white)),
-        )),
-        const SizedBox(height: 20),
-      ]),
-    ));
-  }
-
-  void _openScanner({bool isAddingNew = false}) {
-    showModalBottomSheet(context: context, builder: (context) => MobileScanner(onDetect: (capture) {
-      final code = capture.barcodes.first.rawValue ?? "";
-      Navigator.pop(context);
-      if (isAddingNew) { 
-        barcodeController.text = code; 
-        _showAddSheet(); 
-      } else { 
-        searchController.text = code; 
-        setState(() => searchQuery = code.toLowerCase()); 
+  // --- FIREBASE LOGIC ---
+  void _deliverAndSyncStock(String orderId, Map<String, dynamic> data) async {
+    String medId = data['medicineId'] ?? "";
+    int qty = data['quantity'] ?? 1;
+    try {
+      await FirebaseFirestore.instance.collection('orders').doc(orderId).update({'status': 'Delivered'});
+      if (medId.isNotEmpty) {
+        DocumentReference medRef = FirebaseFirestore.instance.collection('medicines').doc(medId);
+        await FirebaseFirestore.instance.runTransaction((transaction) async {
+          DocumentSnapshot snap = await transaction.get(medRef);
+          if (snap.exists) {
+            int current = int.tryParse(snap['stock'].toString()) ?? 0;
+            transaction.update(medRef, {'stock': (current - qty).clamp(0, 999999)});
+          }
+        });
       }
-    }));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Order Delivered & Stock Updated!"), backgroundColor: Colors.green));
+    } catch (e) { print(e); }
   }
 
-  void _handleLogout() async {
-    await FirebaseAuth.instance.signOut();
-    if (mounted) Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => LoginScreen()), (r) => false);
+  void _showSettingsSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(25))),
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 25, right: 25, top: 25),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text("Update Pharmacy Profile", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1A237E))),
+            _inputField(shopNameController, "Pharmacy Name", Icons.store),
+            _inputField(phoneController, "Official Number", Icons.phone),
+            _inputField(addressController, "Full Address", Icons.map),
+            _inputField(cityController, "City", Icons.location_city),
+            const SizedBox(height: 30),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF1A237E), 
+                minimumSize: const Size(double.infinity, 50),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))
+              ),
+              onPressed: () {
+                FirebaseFirestore.instance.collection('users').doc(uid).update({
+                  'name': shopNameController.text, 'phone': phoneController.text,
+                  'address': addressController.text, 'city': cityController.text,
+                });
+                Navigator.pop(context);
+              },
+              child: const Text("SAVE PROFILE", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+            const SizedBox(height: 30),
+          ],
+        ),
+      ),
+    );
   }
+
+  void _showAddMedicineSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(25))),
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 25, right: 25, top: 25),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text("Inventory Entry", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1A237E))),
+              _inputField(nameController, "Medicine Name", Icons.medication_rounded),
+              _inputField(genericController, "Generic Name", Icons.science_rounded),
+              Row(children: [
+                Expanded(child: _inputField(priceController, "Price (BDT)", Icons.payments_rounded, isNum: true)),
+                const SizedBox(width: 15),
+                Expanded(child: _inputField(stockController, "Stock Qty", Icons.inventory_2_rounded, isNum: true)),
+              ]),
+              const SizedBox(height: 15),
+              TextField(
+                controller: barcodeController,
+                decoration: InputDecoration(
+                  prefixIcon: const Icon(Icons.qr_code_rounded), hintText: "Barcode (Scan or Type)",
+                  suffixIcon: IconButton(icon: const Icon(Icons.camera_alt_rounded, color: Colors.blue), onPressed: () => _openScanner(isAddingNew: true)),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+              const SizedBox(height: 30),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1A237E), 
+                  minimumSize: const Size(double.infinity, 55),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))
+                ),
+                onPressed: () {
+                  if(nameController.text.isEmpty || priceController.text.isEmpty) return;
+                  FirebaseFirestore.instance.collection('medicines').add({
+                    'name': nameController.text, 'generic': genericController.text,
+                    'price': priceController.text, 'stock': int.parse(stockController.text),
+                    'barcode': barcodeController.text, 'ownerId': uid, 'pharmacyName': currentPharmacyName,
+                    'city': pCity, 'timestamp': FieldValue.serverTimestamp(),
+                  });
+                  Navigator.pop(context);
+                  _clearControllers();
+                },
+                child: const Text("ADD TO STOCK", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+              const SizedBox(height: 30),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // --- HELPERS ---
+  Widget _inputField(TextEditingController ctrl, String hint, IconData icon, {bool isNum = false}) {
+    return Padding(padding: const EdgeInsets.only(top: 15), child: TextField(controller: ctrl, keyboardType: isNum ? TextInputType.number : TextInputType.text, decoration: InputDecoration(prefixIcon: Icon(icon, size: 20), hintText: hint, contentPadding: const EdgeInsets.symmetric(horizontal: 16), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)))));
+  }
+
+  void _deleteMedicine(String id) {
+    showDialog(context: context, builder: (context) => AlertDialog(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), title: const Text("Delete Medicine?"), content: const Text("This item will be removed from your public stock."), actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")), TextButton(onPressed: () { FirebaseFirestore.instance.collection('medicines').doc(id).delete(); Navigator.pop(context); }, child: const Text("Delete", style: TextStyle(color: Colors.red)))]));
+  }
+
+  Widget _emptyState(String msg) => Center(child: Padding(padding: const EdgeInsets.all(40), child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.inventory_2_outlined, size: 50, color: Colors.grey.shade300), const SizedBox(height: 15), Text(msg, textAlign: TextAlign.center, style: TextStyle(color: Colors.grey.shade500, fontSize: 14))])));
+
+  void _clearControllers() { nameController.clear(); genericController.clear(); priceController.clear(); stockController.clear(); barcodeController.clear(); }
+  void _makePhoneCall(String p) async { final Uri url = Uri(scheme: 'tel', path: p); if (await canLaunchUrl(url)) await launchUrl(url); }
+  
+  void _handleLogout() async { 
+    await FirebaseAuth.instance.signOut(); 
+    if (mounted) {
+      Navigator.pushAndRemoveUntil(
+        context, 
+        MaterialPageRoute(builder: (context) => LoginScreen()), 
+        (route) => false,
+      ); 
+    }
+  }
+
+  Widget _buildAddButton() => Padding(padding: const EdgeInsets.all(15), child: ElevatedButton(onPressed: _showAddMedicineSheet, style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1A237E), minimumSize: const Size(double.infinity, 55), elevation: 5, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))), child: const Text("ADD NEW MEDICINE", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))));
 }
