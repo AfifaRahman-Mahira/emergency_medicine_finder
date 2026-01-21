@@ -36,9 +36,10 @@ class _PatientHomeState extends State<PatientHome> with SingleTickerProviderStat
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    _fetchPatientProfile();
+    _fetchPatientProfile(); // Fetch user data on startup
   }
 
+  // Fetches current patient's profile details from Firestore
   void _fetchPatientProfile() async {
     String uid = FirebaseAuth.instance.currentUser?.uid ?? "";
     if (uid.isNotEmpty) {
@@ -63,9 +64,10 @@ class _PatientHomeState extends State<PatientHome> with SingleTickerProviderStat
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFF),
       appBar: AppBar(
+        // FIXED: Changed title to 'Emergency Medicine Finder' for a more professional project feel
         title: Text(
-          selectedPharmacyId == null ? "M-Pharma Patient" : selectedPharmacyName!,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 20, letterSpacing: 0.5),
+          selectedPharmacyId == null ? "Emergency Medicine Finder" : selectedPharmacyName!,
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18, letterSpacing: 0.5),
         ),
         backgroundColor: const Color(0xFF1A237E), 
         elevation: 4,
@@ -95,8 +97,11 @@ class _PatientHomeState extends State<PatientHome> with SingleTickerProviderStat
       body: TabBarView(
         controller: _tabController,
         children: [
+          // Directory of all pharmacies in the selected city
           selectedPharmacyId == null ? _buildPharmacyDirectory() : _buildSpecificPharmacyProfile(),
+          // Search engine for all medicines across the city
           _buildAllMedicineSearch(),
+          // Order tracking for the patient
           _buildOrdersTab(),
         ],
       ),
@@ -104,6 +109,7 @@ class _PatientHomeState extends State<PatientHome> with SingleTickerProviderStat
   }
 
   // --- 1. PHARMACY DIRECTORY ---
+  // Lists all users with the 'Pharmacy' role in the user's selected city
   Widget _buildPharmacyDirectory() {
     return Column(
       children: [
@@ -160,6 +166,7 @@ class _PatientHomeState extends State<PatientHome> with SingleTickerProviderStat
   }
 
   // --- 2. GLOBAL MEDICINE SEARCH ---
+  // Allows patients to find a specific medicine and see which pharmacy has it in stock
   Widget _buildAllMedicineSearch() {
     return Column(
       children: [
@@ -171,11 +178,13 @@ class _PatientHomeState extends State<PatientHome> with SingleTickerProviderStat
             builder: (context, snapshot) {
               if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
               
+              // Filter medicines based on user's city
               final allMeds = snapshot.data!.docs.where((doc) {
                 final data = doc.data() as Map<String, dynamic>;
                 return (data['city'] ?? "").toString().toLowerCase() == userCity.toLowerCase();
               }).toList();
 
+              // Search filtering by name or generic name
               var filteredMeds = allMeds.where((doc) {
                 final data = doc.data() as Map<String, dynamic>;
                 return query.isEmpty || data['name'].toString().toLowerCase().contains(query);
@@ -207,6 +216,7 @@ class _PatientHomeState extends State<PatientHome> with SingleTickerProviderStat
   }
 
   // --- 3. MY ORDERS ---
+  // Displays the order history and current status for the patient
   Widget _buildOrdersTab() {
     String uid = FirebaseAuth.instance.currentUser?.uid ?? "";
     return StreamBuilder<QuerySnapshot>(
@@ -218,6 +228,7 @@ class _PatientHomeState extends State<PatientHome> with SingleTickerProviderStat
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) return _emptyState("You haven't placed any orders yet.");
 
         var orders = snapshot.data!.docs;
+        // Sort orders by newest first
         orders.sort((a, b) {
           Timestamp? t1 = (a.data() as Map<String, dynamic>)['timestamp'];
           Timestamp? t2 = (b.data() as Map<String, dynamic>)['timestamp'];
@@ -283,6 +294,7 @@ class _PatientHomeState extends State<PatientHome> with SingleTickerProviderStat
   }
 
   // --- ORDER DIALOG ---
+  // Handles quantity selection and order confirmation
   void _showOrderDialog(Map<String, dynamic> data) {
     int qty = 1;
     int maxStock = int.tryParse(data['stock'].toString()) ?? 0;
@@ -327,7 +339,7 @@ class _PatientHomeState extends State<PatientHome> with SingleTickerProviderStat
               const SizedBox(height: 20),
               const Divider(),
               DropdownButtonFormField<String>(
-                value: paymentMethod,
+                initialValue: paymentMethod,
                 decoration: const InputDecoration(labelText: "Payment Method", border: InputBorder.none),
                 items: ["Cash on Delivery", "Online Payment"].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
                 onChanged: (val) => setDialogState(() => paymentMethod = val!),
@@ -341,6 +353,7 @@ class _PatientHomeState extends State<PatientHome> with SingleTickerProviderStat
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1A237E), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
               onPressed: () async {
+                // Save order to Firestore
                 await FirebaseFirestore.instance.collection('orders').add({
                   'patientId': FirebaseAuth.instance.currentUser?.uid,
                   'patientName': userName,
@@ -359,7 +372,7 @@ class _PatientHomeState extends State<PatientHome> with SingleTickerProviderStat
                   'timestamp': FieldValue.serverTimestamp(),
                 });
                 Navigator.pop(context);
-                _tabController.animateTo(2); 
+                _tabController.animateTo(2); // Jump to Orders tab
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Order successfully placed!"), backgroundColor: Colors.green));
               },
               child: const Text("CONFIRM ORDER", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
@@ -371,6 +384,8 @@ class _PatientHomeState extends State<PatientHome> with SingleTickerProviderStat
   }
 
   // --- UI HELPER WIDGETS ---
+
+  // Medicine Item Card Component
   Widget _buildMedicineCard(Map<String, dynamic> data) {
     int stock = int.tryParse(data['stock'].toString()) ?? 0;
     bool outOfStock = stock <= 0;
@@ -423,6 +438,7 @@ class _PatientHomeState extends State<PatientHome> with SingleTickerProviderStat
     );
   }
 
+  // Shows specific pharmacy profile when a store is clicked
   Widget _buildSpecificPharmacyProfile() {
     return Column(
       children: [
@@ -459,6 +475,7 @@ class _PatientHomeState extends State<PatientHome> with SingleTickerProviderStat
     );
   }
 
+  // City selection dropdown
   Widget _buildCitySelector() => Container(
     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5), 
     color: const Color(0xFF1A237E), 
@@ -474,6 +491,7 @@ class _PatientHomeState extends State<PatientHome> with SingleTickerProviderStat
     )
   );
 
+  // Search input field
   Widget _buildSearchBar() => Padding(
     padding: const EdgeInsets.fromLTRB(14, 15, 14, 10), 
     child: TextField(
@@ -490,6 +508,7 @@ class _PatientHomeState extends State<PatientHome> with SingleTickerProviderStat
     )
   );
 
+  // Lists medicine belonging to the specific selected pharmacy
   Widget _buildPharmacyStockList() => StreamBuilder<QuerySnapshot>(
     stream: FirebaseFirestore.instance.collection('medicines').where('ownerId', isEqualTo: selectedPharmacyId).snapshots(), 
     builder: (context, snapshot) { 
@@ -504,10 +523,12 @@ class _PatientHomeState extends State<PatientHome> with SingleTickerProviderStat
     }
   );
 
+  // Profile management modal
   void _showProfileManager() { 
     showModalBottomSheet(context: context, isScrollControlled: true, shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(25))), builder: (context) => Padding(padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 25, right: 25, top: 25), child: Column(mainAxisSize: MainAxisSize.min, children: [const Text("Edit Profile", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)), const SizedBox(height: 20), TextField(controller: editNameController, decoration: const InputDecoration(labelText: "Full Name", prefixIcon: Icon(Icons.person))), TextField(controller: editPhoneController, decoration: const InputDecoration(labelText: "Phone Number", prefixIcon: Icon(Icons.phone))), TextField(controller: editAddressController, decoration: const InputDecoration(labelText: "Delivery Address", prefixIcon: Icon(Icons.home))), const SizedBox(height: 30), ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1A237E), minimumSize: const Size(double.infinity, 50), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))), onPressed: () { FirebaseFirestore.instance.collection('users').doc(FirebaseAuth.instance.currentUser?.uid).update({'name': editNameController.text, 'phone': editPhoneController.text, 'address': editAddressController.text}); Navigator.pop(context); }, child: const Text("SAVE CHANGES", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))), const SizedBox(height: 30)]))); 
   }
 
+  // Utility widgets and functions
   Widget _qtyBtn(IconData icon, VoidCallback press) => InkWell(onTap: press, child: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: const Color(0xFF1A237E), borderRadius: BorderRadius.circular(10)), child: Icon(icon, color: Colors.white, size: 20)));
   Color _getStatusColor(String s) => s == "Accepted" ? Colors.blue.shade700 : s == "Delivered" ? Colors.green.shade700 : Colors.orange.shade800;
   IconData _getStatusIcon(String s) => s == "Accepted" ? Icons.check_circle_rounded : s == "Delivered" ? Icons.verified_rounded : Icons.pending_actions_rounded;
@@ -516,6 +537,6 @@ class _PatientHomeState extends State<PatientHome> with SingleTickerProviderStat
   Widget _stepLine(bool active) => Expanded(child: Container(height: 2, margin: const EdgeInsets.symmetric(horizontal: 4), color: active ? Colors.green : Colors.grey.shade300));
   Widget _infoRow(IconData icon, String text) => Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: Row(children: [Icon(icon, size: 16, color: Colors.blueGrey), const SizedBox(width: 10), Expanded(child: Text(text, style: const TextStyle(fontSize: 13, color: Colors.black87)))]));
   Widget _emptyState(String msg) => Center(child: Padding(padding: const EdgeInsets.all(40), child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.inventory_2_outlined, size: 50, color: Colors.grey.shade300), const SizedBox(height: 15), Text(msg, textAlign: TextAlign.center, style: TextStyle(color: Colors.grey.shade500, fontSize: 15))])));
-  void _handleLogout() async { await FirebaseAuth.instance.signOut(); Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => LoginScreen()), (route) => false); }
+  void _handleLogout() async { await FirebaseAuth.instance.signOut(); Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => const LoginScreen()), (route) => false); }
   Future<void> _makeCall(String? n) async { if (n != null) { final Uri url = Uri.parse("tel:$n"); if (await canLaunchUrl(url)) await launchUrl(url); } }
 }

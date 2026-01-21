@@ -18,43 +18,41 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final phoneController = TextEditingController();
   final addressController = TextEditingController(); 
   
+  // Rider-er jonno bike number ba license number field thakle bhalo hoy
+  final vehicleController = TextEditingController();
+  
   String selectedRole = 'Patient';
-  String? selectedRegCity = 'Dhaka'; // Default city set to Dhaka
+  String? selectedRegCity = 'Dhaka'; 
   bool isLoading = false;
 
-  // Function to register user in Firebase Auth and Firestore
   void register() async {
-    if (emailController.text.isEmpty || passwordController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Fill all fields")));
+    if (emailController.text.isEmpty || passwordController.text.isEmpty || nameController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please fill mandatory fields")));
       return;
     }
 
     setState(() => isLoading = true);
 
     try {
-      // 1. Create user in Firebase Authentication
       UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
       );
 
-      // 2. Prepare common user data structure
       Map<String, dynamic> userData = {
         'uid': userCredential.user!.uid,
-        'name': nameController.text.isEmpty ? emailController.text.split('@')[0] : nameController.text.trim(),
+        'name': nameController.text.trim(),
         'email': emailController.text.trim(),
         'role': selectedRole,
-        'city': selectedRegCity, // Critical for location-based medicine filtering
+        'city': selectedRegCity,
         'phone': phoneController.text.trim(),
         'address': addressController.text.trim(),
-        'createdAt': FieldValue.serverTimestamp(), // Firestore server-side timestamp
+        'createdAt': FieldValue.serverTimestamp(),
       };
 
-      // 3. Handle Pharmacy-specific data requirements
+      // --- 1. Handling Pharmacy Role ---
       if (selectedRole == 'Pharmacy') {
         userData['pharmacyName'] = pharmacyController.text.trim();
-        
-        // Save to a specialized collection to help patients discover nearby pharmacies
         await FirebaseFirestore.instance.collection('pharmacies').doc(userCredential.user!.uid).set({
           'uid': userCredential.user!.uid,
           'pharmacyName': pharmacyController.text.trim(),
@@ -64,16 +62,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
           'rating': 5.0,
           'isVerified': true,
         });
+      } 
+      
+      // --- 2. Handling Rider Role (New Part) ---
+      else if (selectedRole == 'Rider') {
+        userData['vehicleInfo'] = vehicleController.text.trim();
+        userData['status'] = 'Available'; // Rider-er primary status
+        
+        // Alada rider collection-e rakha jate order pickup request kora shohoj hoy
+        await FirebaseFirestore.instance.collection('riders').doc(userCredential.user!.uid).set({
+          'uid': userCredential.user!.uid,
+          'name': nameController.text.trim(),
+          'phone': phoneController.text.trim(),
+          'city': selectedRegCity,
+          'vehicleInfo': vehicleController.text.trim(),
+          'isOnline': true,
+        });
       }
 
-      // 4. Save the full profile to the main users collection
+      // Save to main users collection
       await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set(userData);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Registration Successful!"), backgroundColor: Colors.green)
         );
-        Navigator.pop(context); // Return to login screen
+        Navigator.pop(context);
       }
     } on FirebaseAuthException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -115,14 +129,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
               const Text("   Register As", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey)),
               const SizedBox(height: 10),
               
-              // Role Selection UI
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 15),
                 decoration: BoxDecoration(
                   color: Colors.white, 
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
-                    // Fixed: withOpacity replaced with withValues
                     BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10)
                   ]
                 ),
@@ -130,13 +142,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   value: selectedRole,
                   isExpanded: true,
                   underline: const SizedBox(),
-                  items: ['Patient', 'Pharmacy'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                  // ADDED: 'Rider' added to the list
+                  items: ['Patient', 'Pharmacy', 'Rider'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
                   onChanged: (v) => setState(() => selectedRole = v!),
                 ),
               ),
 
               const SizedBox(height: 15),
-              // City Selection UI
               const Text("   Select Your City", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey)),
               const SizedBox(height: 10),
               Container(
@@ -145,7 +157,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   color: Colors.white, 
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
-                    // Fixed: withOpacity replaced with withValues
                     BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10)
                   ]
                 ),
@@ -159,20 +170,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
               ),
 
-              // Dynamic fields based on role selection
+              const SizedBox(height: 15),
+              
+              // --- Logic for Dynamic Fields based on Role ---
               if (selectedRole == 'Pharmacy') ...[
-                const SizedBox(height: 15),
                 CustomTextField(controller: pharmacyController, label: "Pharmacy Name", icon: Icons.local_pharmacy_rounded),
                 CustomTextField(controller: phoneController, label: "Pharmacy Phone", icon: Icons.phone),
                 CustomTextField(controller: addressController, label: "Detailed Address", icon: Icons.location_on),
-              ] else ...[
-                const SizedBox(height: 15),
+              ] 
+              else if (selectedRole == 'Rider') ...[
+                CustomTextField(controller: vehicleController, label: "Vehicle Number / Info", icon: Icons.directions_bike_rounded),
+                CustomTextField(controller: phoneController, label: "Contact Phone", icon: Icons.phone),
+                CustomTextField(controller: addressController, label: "Current Location/Area", icon: Icons.my_location),
+              ]
+              else ...[
                 CustomTextField(controller: phoneController, label: "Personal Phone", icon: Icons.phone),
                 CustomTextField(controller: addressController, label: "Your Area/Address", icon: Icons.home),
               ],
 
               const SizedBox(height: 40),
-              // Registration button state management
               isLoading 
                 ? const Center(child: CircularProgressIndicator()) 
                 : CustomButton(text: "CREATE ACCOUNT", onPressed: register),

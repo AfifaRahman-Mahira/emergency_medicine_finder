@@ -46,7 +46,7 @@ class _DeliveryHomeState extends State<DeliveryHome> {
         content: TextField(
           controller: cityController,
           decoration: const InputDecoration(
-            hintText: "Enter City Name (e.g. Uttara)",
+            hintText: "Enter City Name (e.g. Dhaka)",
             border: OutlineInputBorder(),
           ),
         ),
@@ -155,8 +155,11 @@ class _DeliveryHomeState extends State<DeliveryHome> {
 
                 var availableTasks = snapshot.data!.docs.where((doc) {
                   var d = doc.data() as Map<String, dynamic>;
+                  // City filtering logic
                   bool cityMatches = d['city']?.toString().toLowerCase() == riderCity.toLowerCase();
                   if (!cityMatches) return false;
+                  
+                  // If shipped, only show tasks assigned to THIS rider
                   if (d['status'] == 'shipped') return d['riderId'] == uid;
                   return true; 
                 }).toList();
@@ -304,7 +307,6 @@ class _DeliveryHomeState extends State<DeliveryHome> {
     await FirebaseFirestore.instance.collection('orders').doc(orderId).update({
       'status': nextStatus,
       'riderId': uid,
-      'riderName': FirebaseAuth.instance.currentUser?.displayName ?? "Rider",
       'timestamp': FieldValue.serverTimestamp(),
     });
 
@@ -323,17 +325,24 @@ class _DeliveryHomeState extends State<DeliveryHome> {
   Widget _actionBtn(IconData i, String l, Color c, VoidCallback o) => Expanded(child: ElevatedButton.icon(style: ElevatedButton.styleFrom(backgroundColor: c, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))), onPressed: o, icon: Icon(i, size: 18, color: Colors.white), label: Text(l, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold))));
 
   Future<void> _openMap(String? addr) async {
-    if (addr == null) return;
-    final Uri url = Uri.parse("https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(addr)}");
+    if (addr == null || addr.isEmpty) return;
+    // Corrected Google Maps URL Structure
+    final String query = Uri.encodeComponent(addr);
+    final Uri url = Uri.parse("https://www.google.com/maps/search/?api=1&query=$query");
+    
     if (await canLaunchUrl(url)) {
       await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      debugPrint("Could not launch maps");
     }
   }
 
   Future<void> _makeCall(String? p) async {
-    if (p == null) return;
+    if (p == null || p.isEmpty) return;
     final Uri url = Uri.parse("tel:$p");
-    if (await canLaunchUrl(url)) await launchUrl(url);
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url);
+    }
   }
 
   void _showLogoutDialog(BuildContext context) {
@@ -346,8 +355,11 @@ class _DeliveryHomeState extends State<DeliveryHome> {
         TextButton(onPressed: () async {
           await FirebaseAuth.instance.signOut();
           if (mounted) {
-            // FIXED: Removed 'const' keyword to avoid constructor error
-            Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => LoginScreen()), (r) => false);
+            Navigator.pushAndRemoveUntil(
+              context, 
+              MaterialPageRoute(builder: (context) => const LoginScreen()), 
+              (r) => false
+            );
           }
         }, child: const Text("Yes", style: TextStyle(color: Colors.red))),
       ],
